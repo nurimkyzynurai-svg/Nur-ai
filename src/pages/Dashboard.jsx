@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import Logo from '../components/Logo.jsx'
+import DashboardHeader from '../components/DashboardHeader.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { AGENTS, PLANS } from '../data.js'
 
@@ -233,7 +233,7 @@ function DayPanel({ dateKey, posts, onAdd, onDelete }) {
 }
 
 export default function Dashboard() {
-  const { user, logout } = useAuth()
+  const { user } = useAuth()
   const [state, setState] = useState(() => loadState(user.email))
   const [nicheDraft, setNicheDraft] = useState(state.niche)
   const [month, setMonth] = useState(() => {
@@ -281,23 +281,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
-          <Logo />
-          <div className="flex items-center gap-4">
-            <span className="hidden rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700 sm:inline">
-              {plan.name} plan
-            </span>
-            <div className="hidden text-right sm:block">
-              <p className="text-sm font-medium text-slate-900">{user.name}</p>
-              <p className="text-xs text-slate-500">{user.email}</p>
-            </div>
-            <button onClick={logout} className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 hover:border-indigo-300 hover:text-indigo-600">
-              Log out
-            </button>
-          </div>
-        </div>
-      </header>
+      <DashboardHeader />
 
       <main className="mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6">
         <div>

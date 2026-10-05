@@ -3,3 +3,8 @@ dist
 .DS_Store
 *.log
 preview
+
+# Secrets — never commit
+.env
+.env.*
+!.env.example
