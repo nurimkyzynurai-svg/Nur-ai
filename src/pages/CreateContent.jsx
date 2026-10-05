@@ -151,8 +151,8 @@ function Progress({ steps, running }) {
   )
 }
 
-function ScoreRing({ score }) {
-  const color = score >= 7 ? 'text-emerald-600' : score >= 5 ? 'text-amber-500' : 'text-red-500'
+function ScoreRing({ score, passScore }) {
+  const color = score >= passScore ? 'text-emerald-600' : score >= passScore - 2 ? 'text-amber-500' : 'text-red-500'
   return (
     <div className={`grid h-24 w-24 flex-none place-items-center rounded-full border-8 border-current ${color}`}>
       <span className="text-3xl font-extrabold">{score}</span>
@@ -167,21 +167,61 @@ function Results({ result }) {
 
   return (
     <div className="space-y-6">
-      <Card title="Quality score">
-        <div className="flex flex-col gap-6 sm:flex-row sm:items-center">
-          <ScoreRing score={quality.overall_score} />
-          <div className="flex-1 space-y-2 text-sm">
-            <p>
-              <span className="font-semibold">Virality:</span> {quality.virality_score}/10 · <span className="font-semibold">Brand match:</span> {quality.brand_match_score}/10
+      {result.needsReview && (
+        <div role="alert" className="flex gap-3 rounded-2xl border-2 border-amber-400 bg-amber-50 p-5">
+          <span className="text-2xl" aria-hidden="true">⚠️</span>
+          <div>
+            <p className="font-bold text-amber-900">Needs review before posting</p>
+            <p className="mt-1 text-sm text-amber-800">
+              After {quality.maxAttempts} drafts the best score was {quality.overall_score}/10 (the bar is {quality.passScore}). Below is the best draft (draft{' '}
+              {quality.bestAttempt}). Fix the points in “What to fix” before you post it.
             </p>
-            <p className="text-slate-600">
-              {quality.attempts.length === 1 ? 'Approved on the first draft.' : `Drafts: ${quality.attempts.map((a) => `${a.score}/10`).join(' → ')}`}
-              {!quality.passed && ' Did not reach 7 after 3 tries — showing the best draft.'}
-            </p>
-            {quality.strengths?.length > 0 && <p className="text-emerald-700">✓ {quality.strengths.join(' · ')}</p>}
-            {quality.issues?.length > 0 && <p className="text-amber-700">⚠ {quality.issues.join(' · ')}</p>}
           </div>
         </div>
+      )}
+
+      <Card
+        title="Quality score"
+        action={
+          result.needsReview ? (
+            <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold uppercase tracking-wide text-amber-800">Needs review</span>
+          ) : (
+            <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold uppercase tracking-wide text-emerald-800">Approved</span>
+          )
+        }
+      >
+        <div className="flex flex-col gap-6 sm:flex-row sm:items-center">
+          <ScoreRing score={quality.overall_score} passScore={quality.passScore} />
+          <div className="flex-1 space-y-2 text-sm">
+            <p>
+              <span className="font-semibold">Virality:</span> {quality.virality_score}/10 · <span className="font-semibold">Brand match:</span> {quality.brand_match_score}/10 ·{' '}
+              <span className="text-slate-500">pass score {quality.passScore}</span>
+            </p>
+            <p className="text-slate-600">
+              {quality.attempts.length === 1 && quality.passed
+                ? 'Approved on the first draft.'
+                : `Drafts: ${quality.attempts.map((a) => `${a.score}/10`).join(' → ')}`}
+            </p>
+            {quality.strengths?.length > 0 && <p className="text-emerald-700">✓ {quality.strengths.join(' · ')}</p>}
+          </div>
+        </div>
+        {quality.feedback?.length > 0 && (
+          <div className="mt-5 border-t border-slate-100 pt-4">
+            <p className="text-sm font-semibold text-slate-900">{result.needsReview ? 'What to fix' : 'Optional polish'}</p>
+            <ul className="mt-2 space-y-2">
+              {quality.feedback.map((f) => (
+                <li key={f.id} className={`rounded-xl p-3 text-sm ${result.needsReview ? 'bg-amber-50' : 'bg-slate-50'}`}>
+                  <p className="text-slate-800">
+                    <span className="mr-2 font-mono text-xs text-slate-400">{f.id}</span>
+                    {f.problem}
+                  </p>
+                  {f.quote && <p className="mt-1 text-xs italic text-slate-500">“{f.quote}”</p>}
+                  <p className="mt-1 text-xs text-slate-600">→ {f.fix}</p>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </Card>
 
       {plan && (
@@ -219,8 +259,25 @@ function Results({ result }) {
         </ol>
       </Card>
 
-      <Card title={`Script — ${script.title}`} action={<CopyButton text={script.full_voiceover} />}>
-        <p className="mb-4 text-xs text-slate-500">About {script.duration_seconds} seconds</p>
+      <Card
+        title={`Script — ${script.title}`}
+        action={
+          <div className="flex items-center gap-2">
+            {result.needsReview && (
+              <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-amber-800">Needs review</span>
+            )}
+            <CopyButton text={script.full_voiceover} />
+          </div>
+        }
+      >
+        <p className="mb-4 text-xs text-slate-500">
+          About {Math.round(script.duration_seconds)} seconds
+          {script.cta_keyword && (
+            <>
+              {' '}· Keyword: <span className="font-semibold text-indigo-600">{script.cta_keyword}</span>
+            </>
+          )}
+        </p>
         <div className="space-y-3">
           {script.beats.map((b, i) => (
             <div key={i} className="grid gap-2 rounded-xl border border-slate-100 p-3 sm:grid-cols-[90px_1fr]">
@@ -237,6 +294,19 @@ function Results({ result }) {
           ))}
         </div>
       </Card>
+
+      {script.fixes?.length > 0 && (
+        <Card title={`What the Script Agent changed in draft ${quality.bestAttempt}`}>
+          <ul className="space-y-2 text-sm">
+            {script.fixes.map((f, i) => (
+              <li key={i} className="flex gap-3">
+                <span className="flex-none font-mono text-xs text-slate-400">{f.feedback_id}</span>
+                <span className="text-slate-700">{f.what_changed}</span>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
 
       <Card title="Captions" action={<CopyButton text={`${caption.caption}\n\n${caption.hashtags.join(' ')}`} />}>
         <div className="mb-4 flex flex-wrap gap-1">

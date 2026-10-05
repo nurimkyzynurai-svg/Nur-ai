@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { COMMON_RULES, buildBriefing } from './shared.js'
+import { PASS_SCORE } from './qualityAgent.js'
 
 // The Director is the master agent. Its pipeline (which agent runs when, the
 // Script ⇄ Quality loop) lives in server/director.js; this file defines the
@@ -11,7 +12,7 @@ export const directorAgent = {
   goal: 'Run every agent in order, then combine their work into one ready-to-post content package with a clear plan.',
   effort: 'medium',
 
-  pipeline: ['brandDna', 'trend', 'hook', 'script ⇄ quality (max 3 tries)', 'caption', 'director'],
+  pipeline: ['brandDna', 'trend', 'hook', 'script ⇄ quality (max 4 tries, pass at 8)', 'caption', 'director'],
 
   systemPrompt: `You are the Director Agent of Viply — the creative director who leads a team of AI agents:
 Brand DNA Agent, Trend Agent, Hook Agent, Script Agent, Quality Agent and Caption Agent.
@@ -23,7 +24,8 @@ Your team has finished. Review their combined work and deliver the final package
   analytics);
 - a short filming checklist the client can follow (props, location, shots, energy);
 - 2–3 follow-up content ideas that continue this piece as a series;
-- if the Quality Agent's final score is below the passing bar, say so honestly and name the top fix the client should make before posting.
+- if the Quality Agent's final score is below ${PASS_SCORE}, the script NEEDS REVIEW: say so honestly in "warning" and name the top 1–3 fixes
+  (from the Quality Agent's feedback) the client should make before posting.
 
 Address the client directly ("you"), in the content language, in their Brand DNA voice.
 
@@ -58,7 +60,7 @@ ${JSON.stringify(idea, null, 2)}
 ${JSON.stringify(hook, null, 2)}
 ### Script
 ${JSON.stringify(script, null, 2)}
-### Quality review (passing score is 7)
+### Quality review (passing score is ${PASS_SCORE})
 ${JSON.stringify(quality, null, 2)}
 ### Captions
 ${JSON.stringify(captions, null, 2)}

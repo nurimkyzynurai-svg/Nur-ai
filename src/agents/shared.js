@@ -17,10 +17,48 @@ export const GOALS = {
     metrics: 'sales and leads',
     strategy:
       'Optimize for conversions. Lead with the customer’s pain or desire, show proof and the result the product delivers, ' +
-      'handle one objection, and end with one clear call to action (DM a keyword, link in bio, book a call, buy). ' +
+      'handle one objection, and end with ONE call to action that says exactly what to write or do, including a keyword ' +
+      '(e.g. «Напишите слово ТОН в директ», "Comment GLOW and I’ll send you the price list"). ' +
       'Still entertain first — value before the pitch, no hard-sell clichés.',
   },
 }
+
+// Phrases that make content sound generic. Agents must never use them, and the
+// server rejects any script that contains one (see server/checks.js).
+export const BANNED_CLICHES = [
+  // Russian
+  'кожа дышит',
+  'эффект вау',
+  'вау-эффект',
+  'уникальная формула',
+  'уникальное предложение',
+  'премиальное качество',
+  'качество премиум-класса',
+  'лучшее соотношение цены и качества',
+  'индивидуальный подход',
+  'команда профессионалов',
+  'мы работаем для вас',
+  'не упустите шанс',
+  'успейте купить',
+  'в современном мире',
+  'ни для кого не секрет',
+  'жизнь заиграет новыми красками',
+  'выйти на новый уровень',
+  'с любовью к своему делу',
+  // English
+  'game-changer',
+  'game changer',
+  'next level',
+  'unlock your potential',
+  'in today’s fast-paced world',
+  "in today's fast-paced world",
+  'look no further',
+  'best in class',
+  'high-quality products',
+  'one-stop shop',
+  'you won’t believe',
+  "you won't believe",
+]
 
 export const LANGUAGES = ['English', 'Russian', 'Kazakh', 'Spanish', 'Turkish', 'Uzbek', 'German', 'French', 'Portuguese', 'Arabic']
 

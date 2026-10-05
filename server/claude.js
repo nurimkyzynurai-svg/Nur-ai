@@ -2,7 +2,8 @@ import Anthropic from '@anthropic-ai/sdk'
 import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod'
 import { MODEL } from '../src/agents/shared.js'
 
-export const MOCK = process.env.MOCK_AI === 'true'
+export const MOCK = ['true', 'needs-review'].includes(process.env.MOCK_AI)
+const MOCK_ALWAYS_FAIL = process.env.MOCK_AI === 'needs-review'
 
 // The key is read from .env by the server only. It never reaches the browser.
 let client
@@ -67,16 +68,21 @@ async function mockRun(agent, input, signal) {
     })
   })
   const out = structuredClone(agent.exampleOutput)
-  if (agent.id === 'quality' && input.attempt === 1) {
-    // Fail the first draft so the Script ⇄ Quality loop is visible.
+  if (agent.id === 'quality' && (input.attempt === 1 || MOCK_ALWAYS_FAIL)) {
+    // Fail the draft so the Script ⇄ Quality loop (and "needs review") is visible.
     Object.assign(out, {
-      virality_score: 6,
-      overall_score: 6,
+      virality_score: 7,
+      overall_score: 7,
       passed: false,
-      issues: ['The setup is slow — viewers may swipe at second 5.'],
-      feedback_for_script_agent: ['Cut the setup to one line and tease myth three immediately.'],
+      feedback: [
+        { id: 'F1', quote: 'Three myths are wasting your 15 minutes.', problem: 'The setup is slow — viewers may swipe at second 5.', fix: 'Cut the setup to one line and tease myth three immediately.' },
+        { id: 'F2', quote: '', problem: 'No concrete proof in the body.', fix: 'Show a before/after of your form on camera.' },
+      ],
+      previous_feedback_check: (input.previousFeedback || []).map((f) => ({ id: f.id, fixed: true, note: 'Fixed' })),
     })
   }
-  if (agent.id === 'script' && input.feedback) out.changes_made = 'Tightened the setup and teased myth three earlier.'
+  if (agent.id === 'script' && input.feedback?.length) {
+    out.fixes = input.feedback.map((f) => ({ feedback_id: f.id, what_changed: `Fixed: ${f.fix}` }))
+  }
   return out
 }

@@ -10,6 +10,7 @@ import {
   MAX_ATTEMPTS,
 } from '../src/agents/index.js'
 import { runAgent } from './claude.js'
+import { checkScript } from './checks.js'
 
 /**
  * The Director pipeline. Runs every agent in order and reports progress through `emit`:
@@ -52,31 +53,44 @@ export async function runDirector({ niche, goal, language, brandProfile, brandIn
   if (!hooks.hooks.length) throw new Error("Hook Agent returned no hooks. Try again.")
   const hook = hooks.hooks[hookIdx]
 
-  // 4. Script ⇄ Quality loop: rewrite with feedback until the score is at least PASS_SCORE (max MAX_ATTEMPTS).
+  // 4. Script ⇄ Quality loop: the Script Agent rewrites with feedback until the draft
+  //    scores at least PASS_SCORE, for up to MAX_ATTEMPTS drafts. The best draft wins.
   let script
   let quality
   let best
+  let feedback = []
   const attempts = []
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    const previousFeedback = feedback
     script = await step(
       scriptAgent,
-      { ...ctx, idea, hook, feedback: quality?.feedback_for_script_agent, previousScript: script },
-      attempt === 1 ? 'Writing the full script…' : `Rewriting with feedback (try ${attempt} of ${MAX_ATTEMPTS})…`,
-      (s) => `Draft ${attempt}: ${s.duration_seconds}s script`,
+      { ...ctx, idea, hook, feedback: previousFeedback, previousScript: script },
+      attempt === 1 ? 'Writing the full script…' : `Fixing ${previousFeedback.length} feedback points (try ${attempt} of ${MAX_ATTEMPTS})…`,
+      (s) => (attempt === 1 ? `Draft 1: ${Math.round(s.duration_seconds)}s script` : `Draft ${attempt}: ${s.fixes.length} fixes made`),
     )
-    quality = await step(
-      qualityAgent,
-      { ...ctx, idea, hook, script, attempt },
-      `Scoring draft ${attempt}…`,
-      (q) => `Score ${q.overall_score}/10 — ${q.overall_score >= PASS_SCORE ? 'approved' : 'sent back to Script Agent'}`,
-    )
+
+    emit({ type: 'step', agent: qualityAgent.id, name: qualityAgent.name, status: 'running', detail: `Scoring draft ${attempt}…` })
+    quality = await runAgent(qualityAgent, { ...ctx, idea, hook, script, attempt, previousFeedback }, { signal })
+
+    // Rule checks in code, on top of the model's review.
+    const ruleIssues = checkScript({ script, goal, previousFeedback })
+    const unfixed = quality.previous_feedback_check.filter((c) => !c.fixed)
+    quality.feedback = [...ruleIssues, ...quality.feedback]
     quality.overall_score = Math.round(quality.overall_score)
+    if (ruleIssues.length || unfixed.length) quality.overall_score = Math.min(quality.overall_score, PASS_SCORE - 1)
     quality.passed = quality.overall_score >= PASS_SCORE
-    attempts.push({ attempt, score: quality.overall_score, passed: quality.passed })
-    if (!best || quality.overall_score > best.quality.overall_score) best = { script, quality }
+    feedback = quality.passed ? [] : quality.feedback
+
+    const verdict = quality.passed ? 'approved' : attempt < MAX_ATTEMPTS ? `${quality.feedback.length} points sent back` : 'still below the bar'
+    emit({ type: 'step', agent: qualityAgent.id, name: qualityAgent.name, status: 'done', detail: `Score ${quality.overall_score}/10 — ${verdict}` })
+
+    attempts.push({ attempt, score: quality.overall_score, passed: quality.passed, feedbackCount: quality.feedback.length })
+    // On a tie keep the later draft: it has more feedback fixed.
+    if (!best || quality.overall_score >= best.quality.overall_score) best = { script, quality, attempt }
     if (quality.passed) break
   }
   ;({ script, quality } = best)
+  const needsReview = !quality.passed
 
   // 5. Captions
   const captions = await step(captionAgent, { ...ctx, idea, hook, script }, 'Writing captions for every platform…', (c) => `${c.captions.length} platforms ready`)
@@ -100,7 +114,8 @@ export async function runDirector({ niche, goal, language, brandProfile, brandIn
     bestHookIndex: hookIdx,
     hookReasoning: hooks.reasoning,
     script,
-    quality: { ...quality, attempts },
+    quality: { ...quality, attempts, bestAttempt: best.attempt, passScore: PASS_SCORE, maxAttempts: MAX_ATTEMPTS },
+    needsReview,
     captions: captions.captions,
     plan,
   }
