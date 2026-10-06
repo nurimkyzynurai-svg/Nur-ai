@@ -7,18 +7,27 @@ const TABS = [
   ['/dashboard', 'Overview', 'Home'],
   ['/dashboard/create', 'Create Content', 'Create'],
 ]
+const ADMIN_TAB = ['/admin/market-intel', 'Market Intel', 'Intel']
+
+// Who sees the admin tab. The admin API itself is protected by ADMIN_TOKEN on the server.
+const ADMIN_EMAILS = (import.meta.env.VITE_ADMIN_EMAILS || '')
+  .split(',')
+  .map((e) => e.trim().toLowerCase())
+  .filter(Boolean)
+export const isAdmin = (user) => ADMIN_EMAILS.includes(user?.email?.toLowerCase())
 
 export default function DashboardHeader() {
   const { user, logout } = useAuth()
   const plan = PLANS.find((p) => p.id === user.plan) || PLANS[1]
+  const tabs = isAdmin(user) ? [...TABS, ADMIN_TAB] : TABS
 
   return (
     <header className="border-b border-slate-200 bg-white">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
         <div className="flex items-center gap-3 sm:gap-6">
-          <Logo />
+          <Logo compact={tabs.length > 2} />
           <nav className="flex gap-1">
-            {TABS.map(([to, label, short]) => (
+            {tabs.map(([to, label, short]) => (
               <NavLink
                 key={to}
                 to={to}

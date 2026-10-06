@@ -60,6 +60,17 @@ export const BANNED_CLICHES = [
   "you won't believe",
 ]
 
+// Sections of the daily Market Brief (see marketIntelAgent.js).
+export const BRIEF_SECTIONS = [
+  ['platform_updates', 'Platform algorithm & feature changes'],
+  ['trending_formats', 'Trending formats'],
+  ['trending_sounds', 'Trending sounds & audio'],
+  ['trending_topics', 'Trending topics in the niche'],
+  ['marketing_tactics', 'New marketing & sales tactics'],
+  ['competitor_activity', 'Competitor activity'],
+  ['audience_interests', 'Audience interests'],
+]
+
 export const LANGUAGES = ['English', 'Russian', 'Kazakh', 'Spanish', 'Turkish', 'Uzbek', 'German', 'French', 'Portuguese', 'Arabic']
 
 // Rules appended to every agent's system prompt.

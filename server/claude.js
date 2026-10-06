@@ -7,7 +7,7 @@ const MOCK_ALWAYS_FAIL = process.env.MOCK_AI === 'needs-review'
 
 // The key is read from .env by the server only. It never reaches the browser.
 let client
-function getClient() {
+export function getClient() {
   if (!process.env.ANTHROPIC_API_KEY) {
     throw new Error('ANTHROPIC_API_KEY is missing. Put your key in the .env file and restart the server.')
   }
@@ -29,7 +29,7 @@ export function friendlyError(err) {
  * Runs one agent: its system prompt + a user message built from `input`,
  * with the reply constrained to the agent's JSON schema.
  */
-export async function runAgent(agent, input, { signal } = {}) {
+export async function runAgent(agent, input, { signal, onUsage } = {}) {
   if (MOCK) return mockRun(agent, input, signal)
 
   const message = await getClient().beta.messages.parse(
@@ -45,6 +45,7 @@ export async function runAgent(agent, input, { signal } = {}) {
     },
     { signal },
   )
+  onUsage?.(message.usage)
 
   if (message.stop_reason === 'refusal') {
     throw new Error(`${agent.name} declined this request. Try rephrasing the niche.`)

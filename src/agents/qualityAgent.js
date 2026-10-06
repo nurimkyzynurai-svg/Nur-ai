@@ -1,3 +1,4 @@
+import { briefForPrompt } from './marketIntelAgent.js'
 import { z } from 'zod'
 import { BANNED_CLICHES, COMMON_RULES, buildBriefing } from './shared.js'
 
@@ -24,7 +25,8 @@ Be honest and strict: a weak script that reaches the client costs their trust. D
 - Any banned cliché (or a close variant) appears:
 ${BANNED_CLICHES.map((c) => `  - ${c}`).join('\n')}
 - A vague or unprovable claim ("the best", «идеальная кожа», «самый эффективный», results with no concrete detail) that is not
-  backed by something specific the viewer can see or check. Invented statistics count too.
+  backed by something specific the viewer can see or check. Invented statistics count too — a statistic is only allowed
+  if it appears in the Market Brief and is attributed.
 - Business goal: the call to action does not say exactly what to write or do with a keyword in capitals
   (e.g. «Напишите слово ТОН в директ»), or "cta_keyword" is empty, or the keyword in "cta_keyword" is not the one used in the cta beat.
 - The script does not open with the chosen hook, or is not written in the required content language.
@@ -83,6 +85,8 @@ ${COMMON_RULES}`,
 ${JSON.stringify(previousFeedback, null, 2)}`
       : ''
     return `${buildBriefing(ctx)}
+
+${briefForPrompt(ctx.marketBrief)}
 
 ## Chosen content idea
 ${JSON.stringify(idea, null, 2)}

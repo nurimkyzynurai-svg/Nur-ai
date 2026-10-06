@@ -1,3 +1,4 @@
+import { briefForPrompt } from './marketIntelAgent.js'
 import { z } from 'zod'
 import { BANNED_CLICHES, COMMON_RULES, buildBriefing } from './shared.js'
 
@@ -38,7 +39,10 @@ This is a rewrite. Every feedback item has an id (F1, F2, AUTO-1…).
   before/after, a demonstration on camera, a named ingredient or step, a real customer situation.
   Weak: «Наш крем делает кожу идеальной». Strong: «Нанесла утром — к обеду нет жирного блеска на лбу. Показываю».
 - No unprovable superlatives ("the best", «самый эффективный», «№1») unless the briefing gives the proof.
-- No invented statistics, studies, prices or medical/financial guarantees.
+- No invented statistics, studies, prices or medical/financial guarantees. A statistic may only appear if it is in the
+  Market Brief, and then attributed ("according to …").
+- Follow the Market Brief's platform updates (length, format, on-screen text, what the algorithm rewards) when they apply.
+  Never call something a trend unless the brief lists it.
 
 ## Banned clichés — never use these or close variants, in any language
 ${BANNED_CLICHES.map((c) => `- ${c}`).join('\n')}
@@ -102,6 +106,8 @@ ${JSON.stringify(feedback, null, 2)}
 Rewrite the script. Your "fixes" list must contain one entry for each of these ids: ${feedback.map((f) => f.id).join(', ')}.`
       : '\n\nWrite the full script.'
     return `${buildBriefing(ctx)}
+
+${briefForPrompt(ctx.marketBrief)}
 
 ## Chosen content idea
 ${JSON.stringify(idea, null, 2)}

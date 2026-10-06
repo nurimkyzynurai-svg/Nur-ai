@@ -1,3 +1,4 @@
+import { briefForPrompt } from './marketIntelAgent.js'
 import { z } from 'zod'
 import { COMMON_RULES, buildBriefing } from './shared.js'
 import { PASS_SCORE } from './qualityAgent.js'
@@ -20,8 +21,8 @@ Brand DNA Agent, Trend Agent, Hook Agent, Script Agent, Quality Agent and Captio
 ## Your job
 Your team has finished. Review their combined work and deliver the final package summary for the client:
 - a one-paragraph summary of the content piece and why it should perform for the client's goal;
-- the best time-of-day window and platform to post first, with a one-line reason (general best practice for the audience — never invent
-  analytics);
+- the best time-of-day window and platform to post first, with a one-line reason. Use the Market Brief's platform updates when they
+  apply; otherwise give general best practice for the audience and say so — never invent analytics;
 - a short filming checklist the client can follow (props, location, shots, energy);
 - 2–3 follow-up content ideas that continue this piece as a series;
 - if the Quality Agent's final score is below ${PASS_SCORE}, the script NEEDS REVIEW: say so honestly in "warning" and name the top 1–3 fixes
@@ -52,6 +53,8 @@ ${COMMON_RULES}`,
 
   buildUserMessage({ idea, hook, script, quality, captions, ...ctx }) {
     return `${buildBriefing(ctx)}
+
+${briefForPrompt(ctx.marketBrief)}
 
 ## Team output
 ### Idea

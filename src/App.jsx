@@ -4,6 +4,7 @@ import Login from './pages/Login.jsx'
 import Register from './pages/Register.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 import CreateContent from './pages/CreateContent.jsx'
+import MarketIntel from './pages/MarketIntel.jsx'
 import { useAuth } from './context/AuthContext.jsx'
 
 function RequireAuth({ children }) {
@@ -24,6 +25,7 @@ export default function App() {
       <Route path="/register" element={<GuestOnly><Register /></GuestOnly>} />
       <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />
       <Route path="/dashboard/create" element={<RequireAuth><CreateContent /></RequireAuth>} />
+      <Route path="/admin/market-intel" element={<RequireAuth><MarketIntel /></RequireAuth>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )

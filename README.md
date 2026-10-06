@@ -22,6 +22,7 @@ Agent definitions live in `src/agents/`. Each file has a name, role, goal, syste
 | Script Agent | Writes the full script. On a rewrite it fixes every feedback item and lists what it changed. It avoids banned clichés and vague claims. For Business it ends with an exact keyword CTA (e.g. «Напишите слово ТОН») |
 | Quality Agent | Scores virality and brand match from 1 to 10 and gives numbered feedback. Below 8, the script goes back to the Script Agent (4 drafts max). If no draft reaches 8, the best draft is shown labeled **Needs review** |
 | Caption Agent | Writes captions and hashtags for TikTok, Instagram, YouTube Shorts, LinkedIn and Threads |
+| Market Intelligence Agent | Researches the live web with Anthropic's web search tool and saves a cited **Market Brief** per niche (cached 24 h) |
 | Director Agent | Runs everything in order (`server/director.js`) and combines the final package |
 
 Every agent receives the Brand DNA profile, the goal and the content language (see `src/agents/shared.js`, which also holds the banned clichés list).
@@ -29,6 +30,16 @@ Every agent receives the Brand DNA profile, the goal and the content language (s
 On every draft, `server/checks.js` also checks in code for banned clichés, a missing or unused Business keyword, and feedback the rewrite did not address. Any of these keeps the draft below the pass score, even if the Quality Agent missed it.
 
 The backend (`server/`) is the only place the Anthropic API key is read. It comes from `.env`, which is git-ignored. The browser only calls `/api/generate`.
+
+## Market Intel
+
+- **Daily Market Brief per niche** (`src/agents/marketIntelAgent.js`). It covers platform algorithm changes (Instagram, TikTok, YouTube, Threads, LinkedIn, X), trending formats, sounds and topics, marketing and sales tactics, competitor activity and audience interests.
+  - Every item has source links, and code marks anything without a real source as **Unverified** (`server/research.js`).
+  - The Trend, Script, Quality and Director agents get the latest brief. A brief older than 24 hours is refreshed when a client generates content.
+- **Weekly AI & Market Report** for the founder (`src/agents/founderReportAgent.js`). It covers new AI video, voice and image models, competitor updates, platform API changes, and concrete suggestions for Viply.
+- **Market Intel admin tab** (`/admin/market-intel`). It's visible to emails in `VITE_ADMIN_EMAILS` and unlocked with `ADMIN_TOKEN`. It shows reports, briefs, the run log and costs.
+- **Cost control:** each run has a search cap (`MARKET_BRIEF_MAX_SEARCHES`, `FOUNDER_REPORT_MAX_SEARCHES`) and there's a daily cap on scheduled briefs. Every run records its token and search usage and estimated cost (`server/cost.js`).
+- **Scheduler:** an hourly check inside the server refreshes briefs for niches used in the last 14 days and writes the weekly report. Data is saved as JSON in `data/` (git-ignored).
 
 ## Getting started
 

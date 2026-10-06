@@ -5,6 +5,7 @@ import { GOALS, LANGUAGES } from '../agents/shared.js'
 
 const PIPELINE = [
   ['brandDna', 'Brand DNA Agent', '🧬'],
+  ['market', 'Market Intelligence Agent', '🌐'],
   ['trend', 'Trend Agent', '📡'],
   ['hook', 'Hook Agent', '🪝'],
   ['script', 'Script Agent', '📝'],
@@ -325,12 +326,36 @@ function Results({ result }) {
         <p className="mt-2 text-xs text-slate-400">Call to action: {caption.cta}</p>
       </Card>
 
+      <Card title="Market Brief used">
+        {result.marketBrief ? (
+          <>
+            {result.marketBrief.mock && <p className="mb-2 text-xs text-slate-500">Sample data (MOCK_AI mode) — no real research was done.</p>}
+            <p className="text-sm text-slate-700">{result.marketBrief.summary}</p>
+            <p className="mt-2 text-xs text-slate-400">
+              Researched {new Date(result.marketBrief.createdAt).toLocaleDateString()} · {result.marketBrief.sources.length} sources
+            </p>
+            <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+              {result.marketBrief.sources.slice(0, 8).map((s) => (
+                <li key={s.id}>
+                  <a href={s.url} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-600 hover:underline">
+                    [{s.id}] {s.title || s.url}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </>
+        ) : (
+          <p className="text-sm text-amber-700">No fresh market research was available, so the ideas are evergreen rather than trend-based.</p>
+        )}
+      </Card>
+
       <Card title="All 10 trending ideas">
         <ol className="grid gap-2 sm:grid-cols-2">
           {result.ideas.map((it, i) => (
             <li key={i} className="rounded-xl border border-slate-100 p-3 text-sm">
               <p className="font-medium text-slate-900">{it.title}</p>
               <p className="mt-1 text-xs text-slate-500">{it.format} · {it.virality_potential}/10 · {it.angle}</p>
+              {it.based_on && <p className="mt-1 text-[11px] text-indigo-500">Based on: {it.based_on}</p>}
             </li>
           ))}
         </ol>
@@ -374,7 +399,7 @@ export default function CreateContent() {
   function onEvent(evt) {
     if (evt.type === 'step') {
       setSteps((prev) => {
-        if (evt.status === 'running' || evt.status === 'skipped') return [...prev, evt]
+        // An agent that is still running updates its own row (new detail, or its final status).
         const idx = prev.findLastIndex((s) => s.agent === evt.agent && s.status === 'running')
         return idx === -1 ? [...prev, evt] : prev.map((s, i) => (i === idx ? evt : s))
       })

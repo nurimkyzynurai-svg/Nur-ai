@@ -11,6 +11,7 @@ import {
 } from '../src/agents/index.js'
 import { runAgent } from './claude.js'
 import { checkScript } from './checks.js'
+import { getFreshBrief, trackNiche } from './marketIntel.js'
 
 /**
  * The Director pipeline. Runs every agent in order and reports progress through `emit`:
@@ -39,7 +40,25 @@ export async function runDirector({ niche, goal, language, brandProfile, brandIn
     emit({ type: 'brandProfile', profile })
   }
 
-  const ctx = { brandProfile: profile, goal, language, niche }
+  // Market Intelligence: today's cited Market Brief for this niche (cached for 24 hours).
+  await trackNiche(niche)
+  emit({ type: 'step', agent: 'market', name: 'Market Intelligence Agent', status: 'running', detail: 'Checking today’s Market Brief…' })
+  const market = await getFreshBrief(niche, {
+    onResearch: (max) =>
+      emit({ type: 'step', agent: 'market', name: 'Market Intelligence Agent', status: 'running', detail: `Researching the web (up to ${max} searches)…` }),
+  })
+  const marketBrief = market.brief
+  emit({
+    type: 'step',
+    agent: 'market',
+    name: 'Market Intelligence Agent',
+    status: marketBrief ? (market.cached ? 'skipped' : 'done') : 'done',
+    detail: marketBrief
+      ? `${market.cached ? 'Using' : 'New'} brief from ${marketBrief.createdAt.slice(0, 10)} · ${marketBrief.sources.length} sources${market.error ? ' (refresh failed — older brief)' : ''}`
+      : 'No brief available — agents will use evergreen ideas only',
+  })
+
+  const ctx = { brandProfile: profile, goal, language, niche, marketBrief }
 
   // 2. Trends
   const trends = await step(trendAgent, ctx, 'Finding 10 trending ideas…', (t) => `${t.ideas.length} ideas found`)
@@ -108,6 +127,9 @@ export async function runDirector({ niche, goal, language, brandProfile, brandIn
     goal,
     language,
     brandProfile: profile,
+    marketBrief: marketBrief
+      ? { createdAt: marketBrief.createdAt, summary: marketBrief.summary, sources: marketBrief.sources, mock: marketBrief.mock }
+      : null,
     ideas: trends.ideas,
     idea,
     hooks: hooks.hooks,

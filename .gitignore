@@ -8,3 +8,6 @@ preview
 .env
 .env.*
 !.env.example
+
+# Market Intel data (briefs, reports, run log)
+data/
