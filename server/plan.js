@@ -132,15 +132,15 @@ export function normalizeImproved(plan, improved) {
 }
 
 /** "Improve it": the Creative Director improves the plan. Returns the proposal for the client to approve. */
-export async function runPlanImprove({ plan, niche, goal, language, platform, brandProfile, brandInputs }, emit, { signal } = {}) {
+export async function runPlanImprove({ plan, niche, nicheDescription, goal, language, platform, brandProfile, brandInputs }, emit, { signal } = {}) {
   const usage = emptyUsage()
   const { step, stats } = makeStepper(emit, { signal, usage })
-  const profile = await ensureBrand({ niche, goal, language, brandProfile, brandInputs }, emit, { step })
-  const market = await ensureMarketBrief({ niche, platform, language }, emit)
+  const profile = await ensureBrand({ niche: nicheDescription || niche, goal, language, brandProfile, brandInputs }, emit, { step })
+  const market = await ensureMarketBrief({ niche, nicheDescription, platform, language }, emit)
   const window = planWindow(plan)
   const improved = await step(
     planImproverAgent,
-    { brandProfile: profile, goal, language, niche, platform, marketBrief: market.brief, plan, window },
+    { brandProfile: profile, goal, language, niche, nicheDescription, platform, marketBrief: market.brief, plan, window },
     `Improving your ${plan.days.length}-day plan…`,
     (r) => `${r.days.length} days proposed`,
   )
@@ -160,11 +160,11 @@ export async function runPlanImprove({ plan, niche, goal, language, platform, br
  * Each day uses the Market Brief for its own platform (one shared brief per niche + platform + language).
  * Emits { type: 'day', date, status: 'running' | 'done' | 'error', ... } for each day.
  */
-export async function runPlanGenerate({ plan, niche, goal, language, platform, brandProfile, brandInputs }, emit, { signal, onDayDone } = {}) {
+export async function runPlanGenerate({ plan, niche, nicheDescription, goal, language, platform, brandProfile, brandInputs }, emit, { signal, onDayDone } = {}) {
   const usage = emptyUsage()
   const setup = makeStepper(emit, { signal, usage })
   const stats = setup.stats
-  const profile = await ensureBrand({ niche, goal, language, brandProfile, brandInputs }, emit, setup)
+  const profile = await ensureBrand({ niche: nicheDescription || niche, goal, language, brandProfile, brandInputs }, emit, setup)
   const campaign = { name: plan.name, campaignGoal: plan.campaignGoal, keyDate: plan.keyDate, keyDateLabel: plan.keyDateLabel, vision: plan.vision, notes: plan.notes }
 
   // One brief per distinct platform in the plan, fetched before the days start.
@@ -172,7 +172,7 @@ export async function runPlanGenerate({ plan, niche, goal, language, platform, b
   const briefs = new Map()
   const research = []
   for (const p of [...new Set(plan.days.map(dayPlatform))]) {
-    const market = await ensureMarketBrief({ niche, platform: p, language }, emit)
+    const market = await ensureMarketBrief({ niche, nicheDescription, platform: p, language }, emit)
     briefs.set(p, market.brief)
     research.push(market.research)
   }
@@ -190,7 +190,7 @@ export async function runPlanGenerate({ plan, niche, goal, language, platform, b
       emit({ type: 'day', date: day.date, status: 'running', detail: 'Starting…' })
       try {
         const p = dayPlatform(day)
-        const ctx = { brandProfile: profile, goal, language, niche, platform: p, marketBrief: briefs.get(p), planDay: { campaign, day } }
+        const ctx = { brandProfile: profile, goal, language, niche, nicheDescription, platform: p, marketBrief: briefs.get(p), planDay: { campaign, day } }
         const idea = { title: day.content.split('\n')[0].slice(0, 100), plan_item: day.content, format: day.format, platform: day.platform, phase: day.phase }
         const piece = await produceContent(ctx, idea, { emit: dayEmit, step, call })
         for (const k of Object.keys(dayUsage)) usage[k] += dayUsage[k]

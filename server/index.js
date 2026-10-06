@@ -2,7 +2,7 @@ import 'dotenv/config'
 import express from 'express'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { ANY_PLATFORM, GOALS, TARGET_PLATFORMS } from '../src/agents/index.js'
+import { ANY_PLATFORM, cleanNicheLabel, fallbackNicheLabel, GOALS, nicheLabelAgent, TARGET_PLATFORMS } from '../src/agents/index.js'
 import { runDirector } from './director.js'
 import { cleanPlan, runPlanGenerate, runPlanImprove } from './plan.js'
 import crypto from 'node:crypto'
@@ -10,7 +10,7 @@ import { createFeedback, listFeedback, setFeedbackDone, validateFeedback } from 
 import { rateLimit } from './rateLimit.js'
 import { createSession, deleteSession, registerUser, userFromToken, validateRegistration, verifyLogin } from './users.js'
 import { getUsage, LimitError, reserve } from './usage.js'
-import { friendlyError, MOCK } from './claude.js'
+import { friendlyError, MOCK, runAgent } from './claude.js'
 import { comboOf, listBriefs, overview, runBrief, runFounderReport, startScheduler, trackCombo } from './marketIntel.js'
 
 const app = express()
@@ -68,18 +68,35 @@ app.get('/api/usage', requireUser, async (req, res) => {
   res.json(await getUsage(req.user))
 })
 
+// Short niche label (1–5 words) from the client's description. A tiny call; not counted as a free generation.
+const labelLimiter = rateLimit({ windowMs: 10 * 60 * 1000, max: 30, message: 'Too many label requests. Please wait a few minutes.' })
+app.post('/api/niche-label', labelLimiter, requireUser, async (req, res) => {
+  const description = typeof req.body?.description === 'string' ? req.body.description.trim().slice(0, 1000) : ''
+  if (description.length < 3) return res.status(400).json({ error: 'Describe your niche first.' })
+  if (MOCK) return res.json({ label: cleanNicheLabel(fallbackNicheLabel(description)), source: 'fallback' })
+  try {
+    const out = await runAgent(nicheLabelAgent, { description })
+    res.json({ label: cleanNicheLabel(out.label) || cleanNicheLabel(fallbackNicheLabel(description)), source: 'ai' })
+  } catch (err) {
+    console.error('Niche label failed:', friendlyError(err))
+    res.json({ label: cleanNicheLabel(fallbackNicheLabel(description)), source: 'fallback' })
+  }
+})
+
 const limitResponse = (res, err) => res.status(403).json({ error: err.message, code: err.code, usage: err.usage })
 
 // Reads the fields every content request shares. Returns an error message or the clean input.
 function readContentRequest(body = {}) {
-  const { niche, goal, language, platform, brandProfile, brandInputs } = body
+  const { niche, nicheDescription, goal, language, platform, brandProfile, brandInputs } = body
   if (typeof niche !== 'string' || !niche.trim() || niche.length > 200) return { error: 'Please enter your niche (up to 200 characters).' }
+  if (nicheDescription != null && (typeof nicheDescription !== 'string' || nicheDescription.length > 1000)) return { error: 'Please keep the niche description under 1000 characters.' }
   if (!GOALS[goal]) return { error: 'Goal must be "blogger" or "business".' }
   if (typeof language !== 'string' || !language.trim() || language.length > 40) return { error: 'Please choose a content language.' }
   if (platform != null && platform !== '' && platform !== ANY_PLATFORM && !TARGET_PLATFORMS.includes(platform)) return { error: 'Please choose a target platform.' }
   return {
     input: {
       niche: niche.trim(),
+      nicheDescription: typeof nicheDescription === 'string' ? nicheDescription.trim() : '',
       goal,
       language: language.trim(),
       platform: TARGET_PLATFORMS.includes(platform) ? platform : ANY_PLATFORM,

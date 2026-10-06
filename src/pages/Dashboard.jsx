@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import DashboardHeader from '../components/DashboardHeader.jsx'
+import NicheField from '../components/NicheField.jsx'
+import VoiceInput from '../components/VoiceInput.jsx'
+import { load } from '../lib/storage.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import { PLANS } from '../data.js'
 
@@ -163,7 +166,7 @@ function Calendar({ posts, month, setMonth, selected, setSelected }) {
   )
 }
 
-function DayPanel({ dateKey, posts, onAdd, onDelete }) {
+function DayPanel({ dateKey, posts, onAdd, onDelete, language }) {
   const [title, setTitle] = useState('')
   const [platform, setPlatform] = useState('TikTok')
   const [time, setTime] = useState('12:00')
@@ -199,12 +202,14 @@ function DayPanel({ dateKey, posts, onAdd, onDelete }) {
       </ul>
       <form onSubmit={submit} className="mt-5 space-y-2 border-t border-slate-100 pt-4">
         <p className="text-sm font-medium text-slate-700">Add a post</p>
-        <input
+        <textarea
+          rows={2}
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="Post idea or title"
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+          placeholder="Post idea — describe it in your own words"
+          className="w-full resize-y rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
         />
+        <VoiceInput value={title} onChange={setTitle} language={language} maxLength={500} className="-mt-1" />
         <div className="flex gap-2">
           <select value={platform} onChange={(e) => setPlatform(e.target.value)} className="flex-1 rounded-lg border border-slate-300 px-2 py-2 text-sm outline-none focus:border-indigo-500">
             {Object.keys(PLATFORMS).map((p) => <option key={p}>{p}</option>)}
@@ -220,7 +225,7 @@ function DayPanel({ dateKey, posts, onAdd, onDelete }) {
 export default function Dashboard() {
   const { user, usage } = useAuth()
   const [state, setState] = useState(() => loadState(user.email))
-  const [nicheDraft, setNicheDraft] = useState(state.niche)
+  const contentLanguage = load(`viply_brand_${user.email}`, {})?.language || 'English'
   const [month, setMonth] = useState(() => {
     const now = new Date()
     return new Date(now.getFullYear(), now.getMonth(), 1)
@@ -236,13 +241,6 @@ export default function Dashboard() {
     }
   }, [state, user.email])
 
-  function saveNiche(e) {
-    e.preventDefault()
-    const niche = nicheDraft.trim()
-    if (!niche) return
-    setState((s) => ({ ...s, niche }))
-  }
-
   const upcoming = state.posts.filter((p) => p.date >= todayKey()).length
   const firstName = user.name.split(' ')[0]
 
@@ -257,24 +255,14 @@ export default function Dashboard() {
         </div>
 
         <div className="grid gap-6 lg:grid-cols-2">
-          <form onSubmit={saveNiche} className="rounded-2xl border border-slate-200 bg-white p-6">
-            <h2 className="font-semibold text-slate-900">Your niche</h2>
-            <p className="mt-1 text-sm text-slate-500">Used as the starting niche in Create Content and Content Plan.</p>
-            <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-              <input
-                value={nicheDraft}
-                onChange={(e) => setNicheDraft(e.target.value)}
-                placeholder="Your niche or industry — who you serve and what you offer"
-                className="flex-1 rounded-lg border border-slate-300 px-3.5 py-2.5 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
-              />
-              <button className="rounded-lg bg-indigo-600 px-5 py-2.5 font-semibold text-white hover:bg-indigo-700">Save</button>
-            </div>
-            {state.niche && (
-              <p className="mt-3 text-sm text-slate-600">
-                Current niche: <span className="font-semibold text-indigo-600">{state.niche}</span>
-              </p>
-            )}
-          </form>
+          <div className="rounded-2xl border border-slate-200 bg-white p-6">
+            <NicheField
+              value={{ niche: state.niche, nicheDescription: state.nicheDescription, nicheLabelEdited: state.nicheLabelEdited }}
+              onChange={(patch) => setState((s) => ({ ...s, ...patch }))}
+              language={contentLanguage}
+            />
+            <p className="mt-2 text-xs text-slate-400">Saved automatically and used in Create Content and Content Plan.</p>
+          </div>
 
           <div className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-6">
             <div>
@@ -315,6 +303,7 @@ export default function Dashboard() {
             posts={state.posts}
             onAdd={(post) => setState((s) => ({ ...s, posts: [...s.posts, post] }))}
             onDelete={(id) => setState((s) => ({ ...s, posts: s.posts.filter((p) => p.id !== id) }))}
+            language={contentLanguage}
           />
         </div>
       </main>

@@ -3,7 +3,8 @@ import DashboardHeader from '../components/DashboardHeader.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { GOALS, LANGUAGES, TARGET_PLATFORMS } from '../agents/shared.js'
 import MarketFitBlock from '../components/MarketFit.jsx'
-import VoiceInput from '../components/VoiceInput.jsx'
+import NicheField from '../components/NicheField.jsx'
+import { loadNiche, quickLabel, saveNiche } from '../lib/niche.js'
 import { LimitReached, UsagePill } from '../components/EarlyAccess.jsx'
 import { Card, CopyButton } from '../components/ui.jsx'
 import { EMPTY_BRAND, ProfileSummary, VoiceSetup } from '../components/VoiceSetup.jsx'
@@ -311,10 +312,16 @@ export default function CreateContent() {
   const { user, usage, setUsage } = useAuth()
   const [limitMessage, setLimitMessage] = useState('')
   const brandKey = brandStorageKey(user.email)
-  const dashboard = load(`viply_dashboard_${user.email}`, {})
   const saved = load(brandKey, null)
 
-  const [niche, setNiche] = useState(saved?.niche || dashboard.niche || '')
+  const [nicheState, setNicheState] = useState(() => loadNiche(user.email))
+  const updateNiche = (patch) =>
+    setNicheState((n) => {
+      const next = { ...n, ...patch }
+      saveNiche(user.email, next)
+      return next
+    })
+  const niche = nicheState.niche
   const [goal, setGoal] = useState(saved?.goal || 'blogger')
   const [language, setLanguage] = useState(saved?.language || 'English')
   const [customLanguage, setCustomLanguage] = useState('')
@@ -359,7 +366,8 @@ export default function CreateContent() {
   async function generate(e) {
     e.preventDefault()
     const lang = language === 'Other' ? customLanguage.trim() : language
-    if (!niche.trim()) return setError('Please enter your niche.')
+    const nicheLabel = niche.trim() || quickLabel(nicheState.nicheDescription)
+    if (!nicheLabel) return setError('Please describe your niche.')
     if (!lang) return setError('Please type your content language.')
     if (!profile && !brand.examplePosts.some((p) => p.trim()) && !Object.values(brand.answers).some((a) => a.trim())) {
       return setError('Fill in Voice Setup first (at least one post or answer) so the agents can learn your style.')
@@ -375,7 +383,7 @@ export default function CreateContent() {
     try {
       await postStream(
         '/api/generate',
-        { niche, goal, language: lang, platform, brandProfile: profile, brandInputs: profile ? undefined : brand },
+        { niche: nicheLabel, nicheDescription: nicheState.nicheDescription, goal, language: lang, platform, brandProfile: profile, brandInputs: profile ? undefined : brand },
         { onEvent, signal: controller.signal },
       )
     } catch (err) {
@@ -403,20 +411,7 @@ export default function CreateContent() {
           <form onSubmit={generate} className="space-y-6">
             <Card title="1. What are we making?">
               <div className="space-y-5">
-                <div>
-                  <label className="block">
-                    <span className="text-sm font-medium text-slate-700">Niche</span>
-                    <textarea
-                      rows={2}
-                      value={niche}
-                      onChange={(e) => setNiche(e.target.value)}
-                      maxLength={200}
-                      placeholder="Your niche or industry — who you serve and what you offer"
-                      className="mt-1 w-full rounded-lg border border-slate-300 px-3.5 py-2.5 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
-                    />
-                  </label>
-                  <VoiceInput value={niche} onChange={setNiche} language={contentLanguage} maxLength={200} />
-                </div>
+                <NicheField value={nicheState} onChange={updateNiche} language={contentLanguage} title="Niche" compact />
                 <fieldset>
                   <legend className="text-sm font-medium text-slate-700">Goal</legend>
                   <div className="mt-1 grid gap-2 sm:grid-cols-2">

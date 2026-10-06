@@ -68,13 +68,13 @@ export async function latestBrief(input) {
 
 const isFresh = (item, ttl) => item && Date.now() - new Date(item.createdAt).getTime() < ttl
 
-export function runBrief(input, { trigger = 'manual' } = {}) {
+export function runBrief(input, { trigger = 'manual', nicheDescription = '' } = {}) {
   const c = comboOf(input)
   return once(`brief:${comboKey(c)}`, { type: 'brief', ...c }, async () => {
     const started = Date.now()
     const maxSearches = CONFIG.briefMaxSearches
     try {
-      const { data, sources, usage } = MOCK ? await mockResearch('brief', c) : await runResearchAgent(marketIntelAgent, c, { maxSearches })
+      const { data, sources, usage } = MOCK ? await mockResearch('brief', c) : await runResearchAgent(marketIntelAgent, { ...c, nicheDescription }, { maxSearches })
       const brief = {
         id: crypto.randomUUID(),
         ...c,
@@ -106,7 +106,7 @@ const recentFailures = new Map()
  * if there is none from the last 24 hours. If research fails, returns { brief: null, unavailable: true } —
  * the agents then work without market data instead of guessing.
  */
-export async function getFreshBrief(input, { onResearch } = {}) {
+export async function getFreshBrief(input, { onResearch, nicheDescription = '' } = {}) {
   const c = comboOf(input)
   const cached = await latestBrief(c)
   if (isFresh(cached, CONFIG.briefTtlMs)) return { brief: cached, cached: true }
@@ -117,7 +117,7 @@ export async function getFreshBrief(input, { onResearch } = {}) {
   }
   onResearch?.(CONFIG.briefMaxSearches)
   try {
-    const brief = await runBrief(c, { trigger: 'on-demand' })
+    const brief = await runBrief(c, { trigger: 'on-demand', nicheDescription })
     recentFailures.delete(comboKey(c))
     return { brief, cached: false, research: brief.cost }
   } catch (err) {

@@ -54,6 +54,12 @@ The backend (`server/`) is the only place the Anthropic API key is read. It come
 - Viply never receives audio, only text. Note that the browser itself may use its maker's speech service (Chrome: Google, Safari: Apple).
 - `values.js` tells every agent that input may be dictated: read for meaning, don't copy recognition errors, and never treat filler words as brand style.
 
+## Niche: description + short label
+
+- The niche is one shared field (Overview, Create Content, Content Plan): a **description in the client's own words** that grows as you type and has a mic, plus a **short label** of 1–5 words.
+- The label is suggested automatically from the description by `POST /api/niche-label` (`src/agents/nicheLabelAgent.js`). That's one small Claude call that doesn't count as a free generation, with a simple first-words fallback. The user can edit the label, and suggestions stop until they click "Auto-suggest again".
+- **Every agent** and the Market Intelligence research receive the full description. The **market-brief cache uses only the label** (niche label + platform + language), so the brief stays shared between clients in the same niche.
+
 ## Content Plan rules enforced in code (`server/plan.js`)
 
 - Plans have at most 31 days and one item per date. The improved plan stays within the start date to the key date plus 14 days.

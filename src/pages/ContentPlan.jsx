@@ -7,6 +7,8 @@ import { useAuth } from '../context/AuthContext.jsx'
 import { ANY_PLATFORM, GOALS, LANGUAGES, TARGET_PLATFORMS } from '../agents/shared.js'
 import MarketFitBlock from '../components/MarketFit.jsx'
 import VoiceInput from '../components/VoiceInput.jsx'
+import NicheField from '../components/NicheField.jsx'
+import { loadNiche, quickLabel, saveNiche } from '../lib/niche.js'
 import { LimitReached, UsagePill } from '../components/EarlyAccess.jsx'
 import { estimateImproveCost, estimatePlanDayCost } from '../agents/costs.js'
 import { brandKey, load, plansKey, removeCalendarPosts, save, upsertCalendarPosts } from '../lib/storage.js'
@@ -340,7 +342,14 @@ export default function ContentPlan() {
   })
   const plan = store.plans.find((p) => p.id === store.activeId) || store.plans[0]
   const brandSaved = load(brandKey(user.email), null)
-  const [niche, setNiche] = useState(brandSaved?.niche || load(`viply_dashboard_${user.email}`, {}).niche || '')
+  const [nicheState, setNicheState] = useState(() => loadNiche(user.email))
+  const updateNiche = (patch) =>
+    setNicheState((n) => {
+      const next = { ...n, ...patch }
+      saveNiche(user.email, next)
+      return next
+    })
+  const niche = nicheState.niche.trim() || quickLabel(nicheState.nicheDescription)
   const [goal, setGoal] = useState(brandSaved?.goal || 'business')
   const [language, setLanguage] = useState(brandSaved?.language && LANGUAGES.includes(brandSaved.language) ? brandSaved.language : 'English')
   const [customLanguage, setCustomLanguage] = useState('')
@@ -384,7 +393,7 @@ export default function ContentPlan() {
     const dates = filled.map((d) => d.date)
     if (dates.some((d) => !d)) return 'Every day needs a date.'
     if (new Set(dates).size !== dates.length) return 'Two items share a date. Keep one item per day.'
-    if (!niche.trim()) return 'Enter your niche or industry.'
+    if (!niche) return 'Describe your niche (section 3).'
     if (!lang) return 'Choose the content language.'
     if (!profile && !brand.examplePosts.some((p) => p.trim()) && !Object.values(brand.answers).some((a) => a.trim()))
       return 'Fill in Voice Setup (at least one post or answer) so the agents can learn your style.'
@@ -393,6 +402,7 @@ export default function ContentPlan() {
 
   const requestBody = (days) => ({
     niche,
+    nicheDescription: nicheState.nicheDescription,
     goal,
     language: lang,
     platform,
@@ -631,16 +641,19 @@ export default function ContentPlan() {
                   <span className="text-sm font-medium text-slate-700">Key date</span>
                   <input type="date" value={plan.keyDate} onChange={(e) => update({ keyDate: e.target.value })} className={`mt-1 ${inputClass}`} />
                 </label>
-                <label className="sm:col-span-2">
-                  <span className="text-sm font-medium text-slate-700">What happens on the key date?</span>
-                  <input
-                    value={plan.keyDateLabel}
-                    onChange={(e) => update({ keyDateLabel: e.target.value })}
-                    maxLength={120}
-                    placeholder="Launch, sale starts, event, opening, release…"
-                    className={`mt-1 ${inputClass}`}
-                  />
-                </label>
+                <div className="sm:col-span-2">
+                  <label className="block">
+                    <span className="text-sm font-medium text-slate-700">What happens on the key date?</span>
+                    <input
+                      value={plan.keyDateLabel}
+                      onChange={(e) => update({ keyDateLabel: e.target.value })}
+                      maxLength={120}
+                      placeholder="Launch, sale starts, event, opening, release…"
+                      className={`mt-1 ${inputClass}`}
+                    />
+                  </label>
+                  <VoiceInput value={plan.keyDateLabel} onChange={(v) => update({ keyDateLabel: v })} language={lang} maxLength={120} />
+                </div>
                 <div className="sm:col-span-2">
                   <label className="block">
                     <span className="text-sm font-medium text-slate-700">Your vision</span>
@@ -709,10 +722,9 @@ export default function ContentPlan() {
 
             <Card title="3. Brand & audience">
               <div className="grid gap-4 sm:grid-cols-2">
-                <label className="sm:col-span-2">
-                  <span className="text-sm font-medium text-slate-700">Niche or industry</span>
-                  <input value={niche} onChange={(e) => setNiche(e.target.value)} maxLength={200} placeholder="Who you serve and what you offer" className={`mt-1 ${inputClass}`} />
-                </label>
+                <div className="sm:col-span-2">
+                  <NicheField value={nicheState} onChange={updateNiche} language={lang} title="Niche" compact />
+                </div>
                 <fieldset>
                   <legend className="text-sm font-medium text-slate-700">Optimize for</legend>
                   <div className="mt-1 grid grid-cols-2 gap-2">

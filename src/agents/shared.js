@@ -95,10 +95,10 @@ export const COMMON_RULES = `${AGENT_VALUES}
 4. Be original. Never copy existing creators' content; build on patterns, not on their words.
 5. Respond only with the JSON object described in your output format.`
 
-export function buildBriefing({ brandProfile, goal, language, niche, platform, planDay }) {
+export function buildBriefing({ brandProfile, goal, language, niche, nicheDescription, platform, planDay }) {
   const g = GOALS[goal] || GOALS.blogger
   return `# Client briefing
-Niche: ${niche}
+Niche: ${niche}${nicheDescription ? `\nNiche in the client's own words (may be dictated — read for meaning): ${nicheDescription}` : ''}
 Target platform: ${platform || ANY_PLATFORM}
 Content language: ${language}
 Goal: ${g.label} — success is measured in ${g.metrics}.

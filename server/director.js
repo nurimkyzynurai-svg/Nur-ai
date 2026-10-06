@@ -56,12 +56,13 @@ export async function ensureBrand({ niche, goal, language, brandProfile, brandIn
  * Returns { brief, research } — brief is null when market data is unavailable; research is the web-research
  * cost when a new brief had to be made during this request.
  */
-export async function ensureMarketBrief({ niche, platform, language }, emit) {
+export async function ensureMarketBrief({ niche, nicheDescription, platform, language }, emit) {
   const combo = comboOf({ niche, platform, language })
   await trackCombo(combo)
   const name = 'Market Intelligence Agent'
   emit({ type: 'step', agent: 'market', name, status: 'running', detail: `Checking today’s Market Brief (${combo.platform}, ${combo.language})…` })
   const market = await getFreshBrief(combo, {
+    nicheDescription,
     onResearch: (max) => emit({ type: 'step', agent: 'market', name, status: 'running', detail: `Researching the web (up to ${max} searches)…` }),
   })
   const brief = market.brief
@@ -267,14 +268,14 @@ export function logGeneration(label, cost) {
   )
 }
 
-export async function runDirector({ niche, goal, language, platform, brandProfile, brandInputs }, emit, { signal } = {}) {
+export async function runDirector({ niche, nicheDescription, goal, language, platform, brandProfile, brandInputs }, emit, { signal } = {}) {
   const usage = emptyUsage()
   const { step, call, stats } = makeStepper(emit, { signal, usage })
 
-  const profile = await ensureBrand({ niche, goal, language, brandProfile, brandInputs }, emit, { step })
-  const market = await ensureMarketBrief({ niche, platform, language }, emit)
+  const profile = await ensureBrand({ niche: nicheDescription || niche, goal, language, brandProfile, brandInputs }, emit, { step })
+  const market = await ensureMarketBrief({ niche, nicheDescription, platform, language }, emit)
   const marketBrief = market.brief
-  const ctx = { brandProfile: profile, goal, language, niche, platform, marketBrief }
+  const ctx = { brandProfile: profile, goal, language, niche, nicheDescription, platform, marketBrief }
 
   // Trends
   const trends = await step(trendAgent, ctx, 'Finding 10 trending ideas…', (t) => `${t.ideas.length} ideas found`)

@@ -35,9 +35,9 @@ Write the notes as short paragraphs per topic. After each claim, rely on the cit
 For every topic, say clearly when you found nothing reliable.
 ${RESEARCH_RULES}`,
 
-  buildResearchMessage({ niche, platform, language, today, maxSearches }) {
+  buildResearchMessage({ niche, nicheDescription, platform, language, today, maxSearches }) {
     return `Niche: ${niche}
-Target platform: ${platform}
+${nicheDescription ? `How one client describes this niche (context only — this brief is shared by every client in the niche, so research the niche broadly, not this one business): ${nicheDescription}\n` : ''}Target platform: ${platform}
 Audience language / market: ${language}
 Today: ${today}
 Search budget: at most ${maxSearches} web searches. Cover the target platform's algorithm signals first, then the niche-specific topics.
