@@ -220,12 +220,13 @@ function TokenGate({ onSave, error }) {
   )
 }
 
-const FEEDBACK_LABELS = { idea: 'Idea', problem: 'Problem', question: 'Question', partnership: 'Partnership' }
+const FEEDBACK_LABELS = { idea: 'Idea', problem: 'Problem', question: 'Question', partnership: 'Partnership', early_access: 'Early access' }
 const FEEDBACK_STYLE = {
   idea: 'bg-gold-soft text-ink',
   problem: 'bg-red-50 text-red-700',
   question: 'bg-ink-soft text-ink',
   partnership: 'bg-emerald-50 text-emerald-700',
+  early_access: 'bg-ink text-gold',
 }
 
 function FeedbackPanel() {

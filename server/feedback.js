@@ -8,7 +8,8 @@ import { readJSON, updateJSON } from './store.js'
 const FILE = 'feedback.json'
 const MAX_STORED = 5000 // oldest entries are dropped beyond this, so the file can't grow without limit
 
-export const FEEDBACK_TYPES = ['idea', 'problem', 'question', 'partnership']
+// early_access comes from the "Join early access" button, not the type picker.
+export const FEEDBACK_TYPES = ['idea', 'problem', 'question', 'partnership', 'early_access']
 export const LIMITS = { message: 2000, email: 254, page: 200, minMessage: 5 }
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/

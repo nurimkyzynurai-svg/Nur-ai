@@ -10,9 +10,10 @@ const MAX_MESSAGE = 2000
 const field =
   'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-ink focus:ring-2 focus:ring-ink/15'
 
-/** Feedback form used in the dashboard pop-up and in the landing contact block. */
-export default function FeedbackForm({ source, defaultEmail = '', defaultType = 'idea', onSent, autoFocus = false }) {
-  const [type, setType] = useState(defaultType)
+/** Feedback form used in the dashboard pop-up, the landing contact block and the early-access request.
+ *  fixedType hides the type picker (used for "early_access"). */
+export default function FeedbackForm({ source, defaultEmail = '', defaultType = 'idea', fixedType, messagePlaceholder, submitLabel = 'Send', onSent, autoFocus = false }) {
+  const [type, setType] = useState(fixedType || defaultType)
   const [message, setMessage] = useState('')
   const [email, setEmail] = useState(defaultEmail)
   const [website, setWebsite] = useState('') // honeypot: hidden from people, bots fill it in
@@ -21,6 +22,7 @@ export default function FeedbackForm({ source, defaultEmail = '', defaultType = 
 
   async function submit(e) {
     e.preventDefault()
+    e.stopPropagation() // this form can sit inside another form's React tree (e.g. the early-access dialog)
     if (message.trim().length < 5) return setError('Please write a few words.')
     setError('')
     setStatus('sending')
@@ -61,6 +63,7 @@ export default function FeedbackForm({ source, defaultEmail = '', defaultType = 
 
   return (
     <form onSubmit={submit} className="space-y-4" noValidate>
+      {!fixedType && (
       <fieldset>
         <legend className="text-sm font-medium text-slate-700">What is it about?</legend>
         <div className="mt-1.5 flex flex-wrap gap-1.5">
@@ -77,6 +80,7 @@ export default function FeedbackForm({ source, defaultEmail = '', defaultType = 
           ))}
         </div>
       </fieldset>
+      )}
       <label className="block">
         <span className="text-sm font-medium text-slate-700">Message</span>
         <textarea
@@ -86,7 +90,7 @@ export default function FeedbackForm({ source, defaultEmail = '', defaultType = 
           maxLength={MAX_MESSAGE}
           autoFocus={autoFocus}
           required
-          placeholder={type === 'problem' ? 'What happened, and what did you expect?' : 'Tell us in your own words…'}
+          placeholder={messagePlaceholder || (type === 'problem' ? 'What happened, and what did you expect?' : 'Tell us in your own words…')}
           className={`mt-1 ${field}`}
         />
         <span className="mt-1 block text-right text-[11px] text-slate-400">
@@ -112,7 +116,7 @@ export default function FeedbackForm({ source, defaultEmail = '', defaultType = 
         disabled={status === 'sending'}
         className="w-full rounded-xl bg-ink px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-ink/90 disabled:opacity-60"
       >
-        {status === 'sending' ? 'Sending…' : 'Send'}
+        {status === 'sending' ? 'Sending…' : submitLabel}
       </button>
     </form>
   )

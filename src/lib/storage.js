@@ -22,12 +22,12 @@ export const plansKey = (email) => `viply_plans_${email}`
 
 /** Adds or replaces calendar posts (by id) in the Overview calendar. */
 export function upsertCalendarPosts(email, posts) {
-  const state = load(dashboardKey(email), { niche: '', autopilot: false, posts: [] })
+  const state = load(dashboardKey(email), { niche: '', posts: [] })
   const ids = new Set(posts.map((p) => p.id))
   save(dashboardKey(email), { ...state, posts: [...state.posts.filter((p) => !ids.has(p.id)), ...posts] })
 }
 
 export function removeCalendarPosts(email, predicate) {
-  const state = load(dashboardKey(email), { niche: '', autopilot: false, posts: [] })
+  const state = load(dashboardKey(email), { niche: '', posts: [] })
   save(dashboardKey(email), { ...state, posts: state.posts.filter((p) => !predicate(p)) })
 }

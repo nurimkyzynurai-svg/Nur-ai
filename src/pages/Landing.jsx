@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import Logo from '../components/Logo.jsx'
-import { AGENTS, PLANS } from '../data.js'
+import { AGENTS, COMING_SOON, PLANS } from '../data.js'
+import { EARLY_ACCESS_LINE } from '../components/EarlyAccess.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import FeedbackForm from '../components/FeedbackForm.jsx'
 import { FAQ, FAQ_SUBTITLE, FAQ_TITLE } from '../content/faq.js'
@@ -36,7 +37,7 @@ function Nav() {
             <>
               <Link to="/login" className="text-sm font-medium text-slate-700 hover:text-indigo-600">Log in</Link>
               <Link to="/register" className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
-                Start free trial
+                Get early access
               </Link>
             </>
           )}
@@ -63,7 +64,7 @@ function Nav() {
           </Link>
           {!user && (
             <Link to="/register" className="block rounded-md bg-indigo-600 px-3 py-2 text-center font-semibold text-white">
-              Start free trial
+              Get early access
             </Link>
           )}
         </div>
@@ -79,37 +80,25 @@ function Hero() {
         <div className="h-[500px] w-[900px] rounded-full bg-gradient-to-br from-indigo-200 via-indigo-100 to-white opacity-70 blur-3xl" />
       </div>
       <div className="mx-auto max-w-7xl px-4 pb-20 pt-20 text-center sm:px-6 sm:pt-28">
-        <span className="inline-flex items-center gap-2 rounded-full border border-indigo-100 bg-indigo-50 px-4 py-1.5 text-sm font-medium text-indigo-700">
-          <span className="h-2 w-2 rounded-full bg-indigo-500" /> 10 AI agents working for you 24/7
+        <span className="inline-flex items-center gap-2 rounded-full border border-gold/50 bg-gold-soft px-4 py-1.5 text-sm font-medium text-ink">
+          <span className="h-2 w-2 rounded-full bg-gold" /> Early access · 10 AI agents, one content team
         </span>
         <h1 className="mx-auto mt-8 max-w-4xl text-5xl font-extrabold tracking-tight text-slate-900 sm:text-7xl">
           Go Viral. <span className="text-indigo-600">Effortlessly.</span>
         </h1>
         <p className="mx-auto mt-6 max-w-2xl text-lg text-slate-600 sm:text-xl">
-          Viply is your AI content team. Tell it your niche, flip on autopilot, and watch trend-ready posts get
-          researched, written, designed and published — while you sleep.
+          Tell Viply your niche, voice and goal. A team of AI agents researches today’s market, proposes ideas and writes
+          hooks, scripts and captions — and checks the work before you see it. You film and post.
         </p>
         <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
           <Link to="/register" className="w-full rounded-xl bg-indigo-600 px-8 py-4 text-base font-semibold text-white shadow-lg shadow-indigo-600/30 hover:bg-indigo-700 sm:w-auto">
-            Start creating now
+            Try it on your brand
           </Link>
           <a href="#agents" className="w-full rounded-xl border border-slate-200 bg-white px-8 py-4 text-base font-semibold text-slate-700 hover:border-indigo-300 hover:text-indigo-600 sm:w-auto">
             Meet the agents →
           </a>
         </div>
-        <dl className="mx-auto mt-16 grid max-w-3xl grid-cols-2 gap-6 sm:grid-cols-4">
-          {[
-            ['12M+', 'Views generated'],
-            ['40K+', 'Posts published'],
-            ['8.4x', 'Avg. reach lift'],
-            ['15 hrs', 'Saved weekly'],
-          ].map(([value, label]) => (
-            <div key={label}>
-              <dt className="text-3xl font-bold text-indigo-600">{value}</dt>
-              <dd className="mt-1 text-sm text-slate-500">{label}</dd>
-            </div>
-          ))}
-        </dl>
+        <p className="mx-auto mt-6 max-w-xl text-sm text-slate-500">{EARLY_ACCESS_LINE}</p>
       </div>
     </section>
   )
@@ -121,9 +110,9 @@ function Agents() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <div className="mx-auto max-w-2xl text-center">
           <p className="text-sm font-semibold uppercase tracking-wider text-indigo-600">Your AI team</p>
-          <h2 className="mt-3 text-4xl font-bold tracking-tight text-slate-900">10 AI agents. One viral machine.</h2>
+          <h2 className="mt-3 text-4xl font-bold tracking-tight text-slate-900">10 agents that check each other’s work</h2>
           <p className="mt-4 text-lg text-slate-600">
-            Each agent is a specialist. Together they handle every step from trend to published post.
+            Each agent is a specialist. Together they take you from market research to a ready-to-film script and captions.
           </p>
         </div>
         <div className="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-5">
@@ -143,6 +132,24 @@ function Agents() {
             </div>
           ))}
         </div>
+
+        <div className="mt-16 rounded-3xl border border-dashed border-ink/25 bg-white/60 p-6 sm:p-8">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="rounded-full bg-ink px-3 py-1 text-xs font-bold uppercase tracking-wider text-gold">Coming soon</span>
+            <p className="text-sm text-slate-600">Planned, not available yet. We’ll announce each one when it’s ready.</p>
+          </div>
+          <ul className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {COMING_SOON.map((item) => (
+              <li key={item.name} className="flex gap-3 rounded-2xl border border-slate-200 bg-white p-4 opacity-80">
+                <span className="grid h-10 w-10 flex-none place-items-center rounded-xl bg-slate-100 text-xl grayscale">{item.icon}</span>
+                <span>
+                  <span className="block font-semibold text-slate-800">{item.name}</span>
+                  <span className="block text-sm text-slate-500">{item.desc}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
     </section>
   )
@@ -150,16 +157,16 @@ function Agents() {
 
 function HowItWorks() {
   const steps = [
-    ['Enter your niche', 'Fitness, finance, cooking, SaaS — tell Viply who you create for.'],
-    ['Turn on autopilot', 'Your 10 agents research, write, design and schedule content automatically.'],
-    ['Go viral', 'Review your calendar, tweak anything you like, and watch your audience grow.'],
+    ['Set up your Brand DNA', 'Share a few of your best posts and answer five short questions about your voice. You do this once.'],
+    ['Create or bring your plan', 'Generate a single piece, or enter your campaign plan — executed exactly as written or improved with your approval.'],
+    ['Review, film and post', 'Get hooks, a checked script, captions and a market-fit note with sources. You film it and post it yourself.'],
   ]
   return (
     <section id="how" className="py-24">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <div className="mx-auto max-w-2xl text-center">
           <p className="text-sm font-semibold uppercase tracking-wider text-indigo-600">How it works</p>
-          <h2 className="mt-3 text-4xl font-bold tracking-tight text-slate-900">From niche to viral in 3 steps</h2>
+          <h2 className="mt-3 text-4xl font-bold tracking-tight text-slate-900">From your brand to ready-to-film content</h2>
         </div>
         <div className="mt-16 grid gap-8 md:grid-cols-3">
           {steps.map(([title, desc], i) => (
@@ -181,8 +188,9 @@ function Pricing() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <div className="mx-auto max-w-2xl text-center">
           <p className="text-sm font-semibold uppercase tracking-wider text-indigo-600">Pricing</p>
-          <h2 className="mt-3 text-4xl font-bold tracking-tight text-slate-900">Simple plans. Serious growth.</h2>
-          <p className="mt-4 text-lg text-slate-600">Cancel anytime. Every plan starts with a 7-day free trial.</p>
+          <h2 className="mt-3 text-4xl font-bold tracking-tight text-slate-900">Simple plans</h2>
+          <p className="mt-4 text-lg text-slate-600">{EARLY_ACCESS_LINE}</p>
+          <p className="mt-2 text-sm text-slate-500">Payments aren’t switched on yet — no one is charged today.</p>
         </div>
         <div className="mx-auto mt-16 grid max-w-6xl gap-8 lg:grid-cols-3">
           {PLANS.map((plan) => (
@@ -207,11 +215,22 @@ function Pricing() {
               </p>
               <ul className="mt-8 flex-1 space-y-3 text-sm">
                 {plan.features.map((f) => (
-                  <li key={f} className="flex items-start gap-3">
-                    <svg className={`mt-0.5 h-5 w-5 flex-none ${plan.popular ? 'text-indigo-200' : 'text-indigo-600'}`} viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M16.7 5.3a1 1 0 010 1.4l-8 8a1 1 0 01-1.4 0l-4-4a1 1 0 111.4-1.4L8 12.58l7.3-7.3a1 1 0 011.4 0z" clipRule="evenodd" />
-                    </svg>
-                    {f}
+                  <li key={f.text} className={`flex items-start gap-3 ${f.soon ? 'opacity-75' : ''}`}>
+                    {f.soon ? (
+                      <span aria-hidden="true" className={`mt-1 h-3.5 w-3.5 flex-none rounded-full border-2 ${plan.popular ? 'border-indigo-200' : 'border-slate-300'}`} />
+                    ) : (
+                      <svg className={`mt-0.5 h-5 w-5 flex-none ${plan.popular ? 'text-indigo-200' : 'text-indigo-600'}`} viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path fillRule="evenodd" d="M16.7 5.3a1 1 0 010 1.4l-8 8a1 1 0 01-1.4 0l-4-4a1 1 0 111.4-1.4L8 12.58l7.3-7.3a1 1 0 011.4 0z" clipRule="evenodd" />
+                      </svg>
+                    )}
+                    <span>
+                      {f.text}
+                      {f.soon && (
+                        <span className={`ml-2 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${plan.popular ? 'bg-white/15 text-gold' : 'bg-ink text-gold'}`}>
+                          Coming soon
+                        </span>
+                      )}
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -221,7 +240,7 @@ function Pricing() {
                   plan.popular ? 'bg-white text-indigo-600 hover:bg-indigo-50' : 'bg-indigo-600 text-white hover:bg-indigo-700'
                 }`}
               >
-                Choose {plan.name}
+                Try free · {plan.name}
               </Link>
             </div>
           ))}
@@ -235,11 +254,11 @@ function CTA() {
   return (
     <section className="py-24">
       <div className="mx-auto max-w-5xl px-4 sm:px-6">
-        <div className="rounded-3xl bg-gradient-to-br from-indigo-600 to-indigo-800 px-8 py-16 text-center text-white">
-          <h2 className="text-4xl font-bold tracking-tight">Your next viral post is one click away.</h2>
-          <p className="mx-auto mt-4 max-w-xl text-lg text-indigo-100">Join thousands of creators who let Viply run their content engine.</p>
-          <Link to="/register" className="mt-8 inline-block rounded-xl bg-white px-8 py-4 font-semibold text-indigo-600 hover:bg-indigo-50">
-            Get started free
+        <div className="rounded-3xl bg-gradient-to-br from-ink to-[#2a2f7a] px-8 py-16 text-center text-white">
+          <h2 className="font-display text-4xl font-semibold tracking-tight">Try it on your own brand</h2>
+          <p className="mx-auto mt-4 max-w-xl text-lg text-white/80">{EARLY_ACCESS_LINE}</p>
+          <Link to="/register" className="mt-8 inline-block rounded-xl bg-gold px-8 py-4 font-semibold text-ink hover:brightness-95">
+            Get early access
           </Link>
         </div>
       </div>

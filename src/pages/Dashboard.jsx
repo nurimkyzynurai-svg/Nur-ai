@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import DashboardHeader from '../components/DashboardHeader.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
-import { AGENTS, PLANS } from '../data.js'
+import { PLANS } from '../data.js'
 
 const PLATFORMS = {
   TikTok: 'bg-slate-900 text-white',
@@ -11,7 +11,7 @@ const PLATFORMS = {
   LinkedIn: 'bg-sky-100 text-sky-700',
   X: 'bg-slate-100 text-slate-700',
 }
-// Styles for every platform a post can have (Content Plan days can use more than autopilot).
+// Styles for every platform a post can have.
 const PLATFORM_STYLE = {
   ...PLATFORMS,
   Threads: 'bg-slate-800 text-white',
@@ -44,46 +44,11 @@ function PlanPostDetails({ post }) {
   )
 }
 
-const TEMPLATES = [
-  ['Reel', (n) => `3 ${n} mistakes everyone makes (and how to fix them)`],
-  ['Carousel', (n) => `The beginner’s ${n} cheat sheet — save this`],
-  ['Short', (n) => `I tried the viral ${n} trend for 7 days. Here’s what happened`],
-  ['Reel', (n) => `POV: you finally figured out ${n}`],
-  ['Thread', (n) => `10 ${n} tips I wish I knew sooner 🧵`],
-  ['Short', (n) => `Unpopular ${n} opinion that will make you rethink everything`],
-  ['Carousel', (n) => `${n}: expectations vs. reality`],
-  ['Reel', (n) => `The 60-second ${n} routine that changed my life`],
-  ['Short', (n) => `Stop scrolling if you care about ${n}`],
-  ['Post', (n) => `What nobody tells you about ${n}`],
-]
-const TIMES = ['08:00', '11:30', '13:00', '17:30', '19:00', '21:00']
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
 const pad = (n) => String(n).padStart(2, '0')
 const toKey = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 const todayKey = () => toKey(new Date())
-
-function hash(str) {
-  let h = 0
-  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) | 0
-  return Math.abs(h)
-}
-
-function autopilotPostFor(niche, date) {
-  const key = toKey(date)
-  const h = hash(`${niche}|${key}`)
-  const [format, title] = TEMPLATES[h % TEMPLATES.length]
-  const platforms = Object.keys(PLATFORMS)
-  return {
-    id: `auto-${key}`,
-    date: key,
-    time: TIMES[h % TIMES.length],
-    platform: platforms[(h >> 3) % platforms.length],
-    format,
-    title: title(niche),
-    source: 'autopilot',
-  }
-}
 
 function storageKey(email) {
   return `viply_dashboard_${email}`
@@ -92,28 +57,15 @@ function storageKey(email) {
 function loadState(email) {
   try {
     const raw = localStorage.getItem(storageKey(email))
-    if (raw) return JSON.parse(raw)
+    if (raw) {
+      const state = JSON.parse(raw)
+      // Older versions filled the calendar with placeholder "autopilot" posts; they were never real content.
+      return { ...state, posts: (state.posts || []).filter((p) => p.source !== 'autopilot') }
+    }
   } catch {
     // fall through to defaults
   }
-  return { niche: '', autopilot: false, posts: [] }
-}
-
-function Toggle({ checked, onChange, disabled }) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      disabled={disabled}
-      onClick={() => onChange(!checked)}
-      className={`relative inline-flex h-8 w-14 flex-none items-center rounded-full transition disabled:cursor-not-allowed disabled:opacity-50 ${
-        checked ? 'bg-indigo-400 ring-2 ring-white/40' : 'bg-slate-300'
-      }`}
-    >
-      <span className={`inline-block h-6 w-6 rounded-full bg-white shadow transition ${checked ? 'translate-x-7' : 'translate-x-1'}`} />
-    </button>
-  )
+  return { niche: '', posts: [] }
 }
 
 function StatCard({ label, value, hint }) {
@@ -228,7 +180,7 @@ function DayPanel({ dateKey, posts, onAdd, onDelete }) {
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-5">
       <h3 className="font-semibold">{date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</h3>
-      <p className="text-sm text-slate-500">{dayPosts.length} post{dayPosts.length === 1 ? '' : 's'} scheduled</p>
+      <p className="text-sm text-slate-500">{dayPosts.length} post{dayPosts.length === 1 ? '' : 's'} planned</p>
       <ul className="mt-4 space-y-3">
         {dayPosts.length === 0 && <li className="rounded-lg border border-dashed border-slate-200 p-4 text-center text-sm text-slate-400">Nothing scheduled yet.</li>}
         {dayPosts.map((p) => (
@@ -241,7 +193,6 @@ function DayPanel({ dateKey, posts, onAdd, onDelete }) {
               <button onClick={() => onDelete(p.id)} className="text-xs text-slate-400 hover:text-red-600" aria-label="Delete post">✕</button>
             </div>
             <p className="mt-2 text-sm font-medium text-slate-800">{p.title}</p>
-            {p.source === 'autopilot' && <p className="mt-1 text-xs text-indigo-600">⚡ Created by autopilot</p>}
             {p.source === 'plan' && <PlanPostDetails post={p} />}
           </li>
         ))}
@@ -260,14 +211,14 @@ function DayPanel({ dateKey, posts, onAdd, onDelete }) {
           </select>
           <input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="rounded-lg border border-slate-300 px-2 py-2 text-sm outline-none focus:border-indigo-500" />
         </div>
-        <button className="w-full rounded-lg bg-indigo-600 py-2 text-sm font-semibold text-white hover:bg-indigo-700">Schedule</button>
+        <button className="w-full rounded-lg bg-indigo-600 py-2 text-sm font-semibold text-white hover:bg-indigo-700">Add to calendar</button>
       </form>
     </div>
   )
 }
 
 export default function Dashboard() {
-  const { user } = useAuth()
+  const { user, usage } = useAuth()
   const [state, setState] = useState(() => loadState(user.email))
   const [nicheDraft, setNicheDraft] = useState(state.niche)
   const [month, setMonth] = useState(() => {
@@ -285,29 +236,11 @@ export default function Dashboard() {
     }
   }, [state, user.email])
 
-  // Autopilot fills the next 30 days with one post per day, keeping existing ones.
-  function withAutopilot(posts, niche) {
-    const kept = posts.filter((p) => !(p.source === 'autopilot' && p.date >= todayKey()))
-    const start = new Date()
-    const generated = Array.from({ length: 30 }, (_, i) =>
-      autopilotPostFor(niche, new Date(start.getFullYear(), start.getMonth(), start.getDate() + i)),
-    )
-    return [...kept, ...generated]
-  }
-
-  function withoutFutureAutopilot(posts) {
-    return posts.filter((p) => !(p.source === 'autopilot' && p.date >= todayKey()))
-  }
-
   function saveNiche(e) {
     e.preventDefault()
     const niche = nicheDraft.trim()
     if (!niche) return
-    setState((s) => ({ ...s, niche, posts: s.autopilot ? withAutopilot(s.posts, niche) : s.posts }))
-  }
-
-  function toggleAutopilot(on) {
-    setState((s) => ({ ...s, autopilot: on, posts: on ? withAutopilot(s.posts, s.niche) : withoutFutureAutopilot(s.posts) }))
+    setState((s) => ({ ...s, niche }))
   }
 
   const upcoming = state.posts.filter((p) => p.date >= todayKey()).length
@@ -320,13 +253,13 @@ export default function Dashboard() {
       <main className="mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">Hey {firstName} 👋</h1>
-          <p className="mt-1 text-slate-600">Here’s what your AI content team is working on.</p>
+          <p className="mt-1 text-slate-600">Create content, plan campaigns and keep track of what goes out when.</p>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-2">
           <form onSubmit={saveNiche} className="rounded-2xl border border-slate-200 bg-white p-6">
             <h2 className="font-semibold text-slate-900">Your niche</h2>
-            <p className="mt-1 text-sm text-slate-500">Your agents tailor every trend, hook and post to this topic.</p>
+            <p className="mt-1 text-sm text-slate-500">Used as the starting niche in Create Content and Content Plan.</p>
             <div className="mt-4 flex flex-col gap-2 sm:flex-row">
               <input
                 value={nicheDraft}
@@ -343,39 +276,36 @@ export default function Dashboard() {
             )}
           </form>
 
-          <div className={`rounded-2xl border p-6 transition ${state.autopilot ? 'border-indigo-200 bg-indigo-600 text-white' : 'border-slate-200 bg-white'}`}>
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h2 className="font-semibold">Autopilot {state.autopilot ? 'is ON ⚡' : 'is off'}</h2>
-                <p className={`mt-1 text-sm ${state.autopilot ? 'text-indigo-100' : 'text-slate-500'}`}>
-                  {state.niche
-                    ? state.autopilot
-                      ? 'Your agents are creating and scheduling a post every day for the next 30 days.'
-                      : 'Turn on to let your 10 agents research, create and schedule content daily.'
-                    : 'Set your niche first, then turn on autopilot.'}
-                </p>
-              </div>
-              <Toggle checked={state.autopilot} onChange={toggleAutopilot} disabled={!state.niche} />
+          <div className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-6">
+            <div>
+              <h2 className="font-semibold text-slate-900">Start creating</h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Generate one piece with the full agent team, or bring a campaign plan. Finished pieces land in your calendar.
+              </p>
             </div>
-            <div className="mt-5 flex flex-wrap gap-1.5">
-              {AGENTS.map((a) => (
-                <span
-                  key={a.name}
-                  title={a.name}
-                  className={`grid h-9 w-9 place-items-center rounded-lg text-lg ${state.autopilot ? 'bg-white/15' : 'bg-slate-100 grayscale'}`}
-                >
-                  {a.icon}
-                </span>
-              ))}
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Link to="/dashboard/create" className="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700">
+                Create Content
+              </Link>
+              <Link to="/dashboard/plan" className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:border-indigo-300 hover:text-indigo-600">
+                Content Plan
+              </Link>
             </div>
+            <p className="mt-4 text-xs text-slate-400">
+              Autopilot and automatic publishing are planned, not available yet — today you post the content yourself.
+            </p>
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <StatCard label="Scheduled posts" value={upcoming} hint="Today and later" />
-          <StatCard label="Active agents" value={state.autopilot ? '10 / 10' : '0 / 10'} />
-          <StatCard label="Projected reach" value={upcoming ? `${(upcoming * 12.4).toFixed(0)}K` : '—'} hint="Estimate for scheduled posts" />
-          <StatCard label="Plan" value={`$${plan.price}`} hint={`${plan.name} · per month`} />
+          <StatCard label="Planned posts" value={upcoming} hint="In your calendar, today and later" />
+          <StatCard label="Ready content" value={state.posts.filter((p) => p.source === 'plan').length} hint="Generated plan days in the calendar" />
+          <StatCard
+            label="Free generations left"
+            value={usage ? (usage.unlimited ? '∞' : `${usage.remaining} / ${usage.limit}`) : '—'}
+            hint={usage?.unlimited ? 'Team account' : 'Early access'}
+          />
+          <StatCard label="Plan you chose" value={plan.name} hint={`$${plan.price}/month · payments not live yet`} />
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[1fr_340px]">

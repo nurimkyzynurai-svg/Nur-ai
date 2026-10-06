@@ -31,7 +31,7 @@ export const FAQ = [
   },
   {
     q: 'What happens to my data?',
-    a: 'Today your account, Brand DNA, plans and generated content are stored in your own browser on this device. To create content, your inputs are sent to the Viply server and to Anthropic’s Claude API, which writes the text. Market research briefs contain only public web information about a niche and are shared between clients with the same niche, platform and language — your own posts, plans and scripts are never shared with other clients. Messages you send through the feedback form are stored on the Viply server.',
+    a: 'Your account (name, email and a securely hashed password) and how many generations you’ve used are stored on the Viply server. Your Brand DNA, plans and generated content are stored in your own browser on this device. To create content, your inputs are sent to the Viply server and to Anthropic’s Claude API, which writes the text. Market research briefs contain only public web information about a niche and are shared between clients with the same niche, platform and language — your own posts, plans and scripts are never shared with other clients. Messages you send through the feedback form are stored on the Viply server.',
   },
   {
     q: 'Can I trust the trends and numbers it gives me?',
@@ -39,6 +39,6 @@ export const FAQ = [
   },
   {
     q: 'How do I get early access?',
-    a: 'Viply is in early access. Create an account to try it, and tell us what you need through “Suggest an idea / Report a problem” in the dashboard or the contact form below. Payments are not switched on yet, so no one is charged today.',
+    a: 'Viply is in early access. Create an account and try it free on your own brand — 3 generations (one Create Content run or one Content Plan day each). After that, use “Join early access” in the dashboard to lock in a founding-member price. Payments are not switched on yet, so no one is charged today.',
   },
 ]

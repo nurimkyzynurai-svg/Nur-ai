@@ -80,6 +80,7 @@ To try the app without an API key, set `MOCK_AI=true` in `.env`. The agents will
 
 ## Notes
 
-- Authentication is a **front-end demo** with no backend. Accounts (with SHA-256 password hashes), the session, and dashboard data are stored in the browser's `localStorage`. Before going to production, replace the functions in `src/context/AuthContext.jsx` with a real auth API.
+- **Accounts are on the server:** `data/users.json` stores scrypt-hashed passwords, and `data/sessions.json` stores sessions as hashed tokens. All code is in `server/users.js`, so moving to Supabase means rewriting only that file. Brand DNA, plans and generated content still live in the browser. Accounts made with older versions (browser-only) need to sign up again.
+- **Free early access:** each account gets `FREE_GENERATIONS` (default 3) generations, counted on the server in `data/usage.json` (`server/usage.js`). One Create Content run or one Content Plan day counts as one generation. Failed or stopped work isn't counted. Emails in `VITE_ADMIN_EMAILS` have no limit. When the limit is reached, the app shows a friendly message and a **Join early access** button, and the request appears in Market Intel → Feedback.
 - Autopilot schedules one post per day for the next 30 days, based on your niche. Turning it off removes the upcoming autopilot posts and keeps your manual posts.
 - Content for the agents and the pricing plans is in `src/data.js`.

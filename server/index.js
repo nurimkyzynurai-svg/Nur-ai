@@ -8,6 +8,8 @@ import { cleanPlan, runPlanGenerate, runPlanImprove } from './plan.js'
 import crypto from 'node:crypto'
 import { createFeedback, listFeedback, setFeedbackDone, validateFeedback } from './feedback.js'
 import { rateLimit } from './rateLimit.js'
+import { createSession, deleteSession, registerUser, userFromToken, validateRegistration, verifyLogin } from './users.js'
+import { getUsage, LimitError, reserve } from './usage.js'
 import { friendlyError, MOCK } from './claude.js'
 import { comboOf, listBriefs, overview, runBrief, runFounderReport, startScheduler, trackCombo } from './marketIntel.js'
 
@@ -19,6 +21,54 @@ app.use(express.json({ limit: '200kb' }))
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true, mock: MOCK, hasKey: Boolean(process.env.ANTHROPIC_API_KEY) })
 })
+
+// ---------- Accounts ----------
+const registerLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 10, message: 'Too many sign-ups from your network. Please try again later.' })
+const loginLimiter = rateLimit({ windowMs: 10 * 60 * 1000, max: 20, message: 'Too many login attempts. Please wait a few minutes.' })
+const bearer = (req) => (String(req.get('authorization') || '').match(/^Bearer\s+(.+)$/) || [])[1]
+
+async function requireUser(req, res, next) {
+  try {
+    const user = await userFromToken(bearer(req))
+    if (!user) return res.status(401).json({ error: 'Please log in again.', code: 'AUTH_REQUIRED' })
+    req.user = user
+    next()
+  } catch (err) {
+    next(err)
+  }
+}
+
+app.post('/api/auth/register', registerLimiter, async (req, res) => {
+  const { value, error } = validateRegistration(req.body)
+  if (error) return res.status(400).json({ error })
+  try {
+    const user = await registerUser(value)
+    res.status(201).json({ user, token: await createSession(user.id), usage: await getUsage(user) })
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.status ? err.message : 'Could not create the account.' })
+  }
+})
+
+app.post('/api/auth/login', loginLimiter, async (req, res) => {
+  const user = await verifyLogin(req.body?.email, req.body?.password)
+  if (!user) return res.status(401).json({ error: 'Invalid email or password.' })
+  res.json({ user, token: await createSession(user.id), usage: await getUsage(user) })
+})
+
+app.get('/api/auth/me', requireUser, async (req, res) => {
+  res.json({ user: req.user, usage: await getUsage(req.user) })
+})
+
+app.post('/api/auth/logout', async (req, res) => {
+  await deleteSession(bearer(req))
+  res.json({ ok: true })
+})
+
+app.get('/api/usage', requireUser, async (req, res) => {
+  res.json(await getUsage(req.user))
+})
+
+const limitResponse = (res, err) => res.status(403).json({ error: err.message, code: err.code, usage: err.usage })
 
 // Reads the fields every content request shares. Returns an error message or the clean input.
 function readContentRequest(body = {}) {
@@ -64,16 +114,38 @@ async function streamJob(res, run) {
   }
 }
 
-app.post('/api/generate', async (req, res) => {
+// One Create Content run = 1 free generation (counted only when it finishes).
+app.post('/api/generate', requireUser, async (req, res) => {
   const { input, error } = readContentRequest(req.body)
   if (error) return res.status(400).json({ error })
-  await streamJob(res, (emit, signal) => runDirector(input, emit, { signal }))
+  let slot
+  try {
+    slot = await reserve(req.user, 1)
+  } catch (err) {
+    if (err instanceof LimitError) return limitResponse(res, err)
+    throw err
+  }
+  try {
+    await streamJob(res, async (emit, signal) => {
+      const result = await runDirector(input, emit, { signal })
+      await slot.commit(1)
+      emit({ type: 'usage', usage: await getUsage(req.user) })
+      return result
+    })
+  } finally {
+    slot.release()
+  }
 })
 
 // Content Plan: "Improve it" proposes changes; "generate" produces every day.
-app.post('/api/plan/improve', async (req, res) => {
+// "Improve it" doesn't use a generation, but needs at least one left (it still costs API calls).
+app.post('/api/plan/improve', requireUser, async (req, res) => {
   const { input, error } = readContentRequest(req.body)
   if (error) return res.status(400).json({ error })
+  const usage = await getUsage(req.user)
+  if (!usage.unlimited && usage.remaining < 1) {
+    return limitResponse(res, new LimitError('You’ve used your free generations. Join early access to keep planning and creating.', usage))
+  }
   let plan
   try {
     plan = cleanPlan(req.body.plan)
@@ -83,7 +155,8 @@ app.post('/api/plan/improve', async (req, res) => {
   await streamJob(res, (emit, signal) => runPlanImprove({ ...input, plan }, emit, { signal }))
 })
 
-app.post('/api/plan/generate', async (req, res) => {
+// Each produced plan day = 1 free generation (failed days are not counted).
+app.post('/api/plan/generate', requireUser, async (req, res) => {
   const { input, error } = readContentRequest(req.body)
   if (error) return res.status(400).json({ error })
   let plan
@@ -92,7 +165,22 @@ app.post('/api/plan/generate', async (req, res) => {
   } catch (err) {
     return res.status(400).json({ error: err.message })
   }
-  await streamJob(res, (emit, signal) => runPlanGenerate({ ...input, plan }, emit, { signal }))
+  let slot
+  try {
+    slot = await reserve(req.user, plan.days.length)
+  } catch (err) {
+    if (err instanceof LimitError) return limitResponse(res, err)
+    throw err
+  }
+  try {
+    await streamJob(res, async (emit, signal) => {
+      const result = await runPlanGenerate({ ...input, plan }, emit, { signal, onDayDone: () => slot.commit(1) })
+      emit({ type: 'usage', usage: await getUsage(req.user) })
+      return result
+    })
+  } finally {
+    slot.release()
+  }
 })
 
 // ---------- Market Intel admin API (founder only) ----------

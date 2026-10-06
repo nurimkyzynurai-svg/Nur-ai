@@ -3,6 +3,7 @@ import DashboardHeader from '../components/DashboardHeader.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { GOALS, LANGUAGES, TARGET_PLATFORMS } from '../agents/shared.js'
 import MarketFitBlock from '../components/MarketFit.jsx'
+import { LimitReached, UsagePill } from '../components/EarlyAccess.jsx'
 import { Card, CopyButton } from '../components/ui.jsx'
 import { EMPTY_BRAND, ProfileSummary, VoiceSetup } from '../components/VoiceSetup.jsx'
 import { brandKey as brandStorageKey, load, save } from '../lib/storage.js'
@@ -306,7 +307,8 @@ function Results({ result }) {
 }
 
 export default function CreateContent() {
-  const { user } = useAuth()
+  const { user, usage, setUsage } = useAuth()
+  const [limitMessage, setLimitMessage] = useState('')
   const brandKey = brandStorageKey(user.email)
   const dashboard = load(`viply_dashboard_${user.email}`, {})
   const saved = load(brandKey, null)
@@ -345,6 +347,8 @@ export default function CreateContent() {
       setEditingBrand(false)
     } else if (evt.type === 'result') {
       setResult(evt.result)
+    } else if (evt.type === 'usage') {
+      setUsage(evt.usage)
     } else if (evt.type === 'error') {
       setError(evt.message)
     }
@@ -373,7 +377,10 @@ export default function CreateContent() {
         { onEvent, signal: controller.signal },
       )
     } catch (err) {
-      if (err.name !== 'AbortError') setError(err.message)
+      if (err.code === 'FREE_LIMIT_REACHED') {
+        setLimitMessage(err.message)
+        if (err.usage) setUsage(err.usage)
+      } else if (err.name !== 'AbortError') setError(err.message)
     } finally {
       setRunning(false)
     }
@@ -387,7 +394,7 @@ export default function CreateContent() {
       <main className="mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">Create Content</h1>
-          <p className="mt-1 text-slate-600">Your AI team researches, writes, checks and packages a ready-to-post video.</p>
+          <p className="mt-1 text-slate-600">Your AI team researches, writes and checks ready-to-film content: hooks, a script and captions. You film and post it.</p>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
@@ -482,11 +489,15 @@ export default function CreateContent() {
             </Card>
 
             {error && <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600">{error}</p>}
+            {(limitMessage || usage?.remaining === 0) && <LimitReached message={limitMessage} />}
+            <div className="flex justify-end">
+              <UsagePill usage={usage} />
+            </div>
 
             <div className="flex gap-3">
               <button
                 type="submit"
-                disabled={running}
+                disabled={running || usage?.remaining === 0}
                 className="flex-1 rounded-xl bg-indigo-600 px-6 py-4 font-semibold text-white shadow-lg shadow-indigo-600/20 hover:bg-indigo-700 disabled:opacity-60"
               >
                 {running ? 'Your AI team is working…' : '⚡ Generate'}

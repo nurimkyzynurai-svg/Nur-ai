@@ -46,7 +46,7 @@ export default function DashboardHeader() {
             </nav>
           </div>
           <div className="flex flex-none items-center gap-4">
-            <span className="hidden rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700 lg:inline">{plan.name} plan</span>
+            <span className="hidden rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700 lg:inline">Early access · {plan.name}</span>
             <div className="hidden text-right lg:block">
               <p className="text-sm font-medium text-slate-900">{user.name}</p>
               <p className="text-xs text-slate-500">{user.email}</p>

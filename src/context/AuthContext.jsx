@@ -1,76 +1,69 @@
-import { createContext, useContext, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useState } from 'react'
+import { authHeaders, getSession, setSession } from '../lib/session.js'
 
-// Demo auth: accounts live in localStorage so the app runs without a backend.
-// Swap these functions for real API calls when a server is added.
-const USERS_KEY = 'viply_users'
-const SESSION_KEY = 'viply_session'
-
+// Accounts live on the Viply server (data/users.json). The browser keeps only the session token.
 const AuthContext = createContext(null)
 
-function readJSON(key, fallback) {
+async function call(path, body) {
+  let res
   try {
-    const raw = localStorage.getItem(key)
-    return raw ? JSON.parse(raw) : fallback
+    res = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders() }, body: JSON.stringify(body || {}) })
   } catch {
-    return fallback
+    throw new Error('Cannot reach the Viply server. Please try again in a moment.')
   }
-}
-
-function writeJSON(key, value) {
-  try {
-    localStorage.setItem(key, JSON.stringify(value))
-  } catch {
-    // Storage unavailable (private mode); session stays in memory only.
-  }
-}
-
-async function hashPassword(password) {
-  const data = new TextEncoder().encode(password)
-  const digest = await crypto.subtle.digest('SHA-256', data)
-  return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, '0')).join('')
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(data.error || `Something went wrong (${res.status}).`)
+  return data
 }
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(() => readJSON(SESSION_KEY, null))
+  const [session, setState] = useState(() => getSession())
+  const [usage, setUsage] = useState(null)
+  const user = session?.user || null
 
-  function startSession(account) {
-    const session = { name: account.name, email: account.email, plan: account.plan }
-    writeJSON(SESSION_KEY, session)
-    setUser(session)
+  const save = (next) => {
+    setSession(next)
+    setState(next)
   }
 
+  const logout = useCallback(() => {
+    fetch('/api/auth/logout', { method: 'POST', headers: authHeaders() }).catch(() => {})
+    setSession(null)
+    setState(null)
+    setUsage(null)
+  }, [])
+
+  const refreshUsage = useCallback(async () => {
+    if (!getSession()) return
+    try {
+      const res = await fetch('/api/usage', { headers: authHeaders() })
+      if (res.status === 401) return logout()
+      if (res.ok) setUsage(await res.json())
+    } catch {
+      // server unreachable — keep the last known usage
+    }
+  }, [logout])
+
+  useEffect(() => {
+    refreshUsage()
+    const onSignedOut = () => logout()
+    window.addEventListener('viply:signed-out', onSignedOut)
+    return () => window.removeEventListener('viply:signed-out', onSignedOut)
+  }, [refreshUsage, logout])
+
   async function register({ name, email, password, plan }) {
-    const users = readJSON(USERS_KEY, {})
-    const key = email.trim().toLowerCase()
-    if (users[key]) throw new Error('An account with this email already exists.')
-    const account = { name: name.trim(), email: key, plan, passwordHash: await hashPassword(password) }
-    writeJSON(USERS_KEY, { ...users, [key]: account })
-    startSession(account)
+    const data = await call('/api/auth/register', { name, email, password, plan })
+    save({ token: data.token, user: data.user })
+    setUsage(data.usage)
   }
 
   async function login({ email, password }) {
-    const users = readJSON(USERS_KEY, {})
-    const account = users[email.trim().toLowerCase()]
-    if (!account || account.passwordHash !== (await hashPassword(password))) {
-      throw new Error('Invalid email or password.')
-    }
-    startSession(account)
+    const data = await call('/api/auth/login', { email, password })
+    save({ token: data.token, user: data.user })
+    setUsage(data.usage)
   }
 
-  function logout() {
-    try {
-      localStorage.removeItem(SESSION_KEY)
-    } catch {
-      // ignore
-    }
-    setUser(null)
-  }
-
-  return (
-    <AuthContext.Provider value={{ user, register, login, logout }}>
-      {children}
-    </AuthContext.Provider>
-  )
+  return <AuthContext.Provider value={{ user, usage, setUsage, refreshUsage, register, login, logout }}>{children}</AuthContext.Provider>
 }
 
 export function useAuth() {

@@ -1,37 +1,68 @@
+// Landing page content. Keep it honest: list only what is built today; planned work goes in COMING_SOON.
+
+// The agents that actually run in Viply today (see src/agents/).
 export const AGENTS = [
-  { name: 'Trend Scout', icon: '📡', desc: 'Scans TikTok, Reels and Shorts around the clock to catch rising trends in your niche before they peak.' },
-  { name: 'Hook Writer', icon: '🪝', desc: 'Crafts scroll-stopping opening lines tested against millions of high-performing posts.' },
-  { name: 'Script Architect', icon: '📝', desc: 'Turns ideas into tight, retention-optimized scripts with a clear story arc and call to action.' },
-  { name: 'Caption Crafter', icon: '✍️', desc: 'Writes on-brand captions tailored to each platform’s tone, length and algorithm.' },
-  { name: 'Hashtag Strategist', icon: '#️⃣', desc: 'Picks the perfect mix of broad, niche and trending hashtags to maximize reach.' },
-  { name: 'Visual Designer', icon: '🎨', desc: 'Generates thumbnails, carousels and cover images that match your brand kit.' },
-  { name: 'Video Editor', icon: '🎬', desc: 'Cuts, captions and paces short-form video with auto B-roll, zooms and music sync.' },
-  { name: 'Scheduler', icon: '🗓️', desc: 'Publishes at the exact moments your audience is most active, on every platform.' },
-  { name: 'Engagement Manager', icon: '💬', desc: 'Replies to comments and DMs in your voice to keep the algorithm — and your fans — happy.' },
-  { name: 'Analytics Coach', icon: '📈', desc: 'Learns from every post and feeds insights back to the other agents so you grow faster each week.' },
+  { name: 'Brand DNA', icon: '🧬', desc: 'Learns your voice from your best posts and five short answers, and keeps every agent on-brand.' },
+  { name: 'Market Intelligence', icon: '🌐', desc: 'Researches the live web for your niche, platform and language, with source links. Unconfirmed items are marked.' },
+  { name: 'Trend', icon: '📡', desc: 'Suggests 10 content ideas for your niche, built on the market brief — or marked evergreen when there is no fresh data.' },
+  { name: 'Creative Director', icon: '💡', desc: 'Turns the best ideas into 3 bold concepts. It can also improve a whole campaign plan, with your approval.' },
+  { name: 'Director', icon: '🎬', desc: 'Picks the strongest concept, runs the team in order and sums up the final package.' },
+  { name: 'Hook', icon: '🪝', desc: 'Writes 5 hooks for the first 3 seconds and picks the strongest.' },
+  { name: 'Script', icon: '📝', desc: 'Writes the full short-video script and fixes every point the reviewers send back.' },
+  { name: 'Quality', icon: '🔍', desc: 'Scores each script for virality and brand match, and sends it back with specific fixes until it passes.' },
+  { name: 'Market Fit', icon: '📊', desc: 'Checks the finished script against today’s market and shows why it can work now and the main risk.' },
+  { name: 'Caption', icon: '✍️', desc: 'Writes captions and hashtags for TikTok, Instagram, YouTube Shorts, LinkedIn and Threads.' },
 ]
 
+// Planned — not available yet. Shown in a separate, clearly labeled block.
+export const COMING_SOON = [
+  { name: 'Video Editor', icon: '🎞️', desc: 'Cutting, captions and pacing for your footage.' },
+  { name: 'Publishing & Scheduler', icon: '🗓️', desc: 'Posting to your accounts at the times you choose. Today you post yourself.' },
+  { name: 'Autopilot', icon: '⚡', desc: 'Content created and planned for you on a regular schedule.' },
+  { name: 'Engagement Manager', icon: '💬', desc: 'Help with replying to comments and messages in your voice.' },
+  { name: 'Visual Designer', icon: '🎨', desc: 'Thumbnails, covers and carousel images.' },
+  { name: 'Analytics', icon: '📈', desc: 'Learning from your post results to improve the next ones.' },
+]
+
+// Plans and prices. Payments are not switched on yet; `soon` marks features that are planned, not built.
 export const PLANS = [
   {
     id: 'start',
     name: 'Start',
     price: 97,
-    tagline: 'For creators getting serious about growth.',
-    features: ['1 brand / niche', '30 AI posts per month', '5 core AI agents', '2 connected platforms', 'Content calendar', 'Email support'],
+    tagline: 'For creators getting serious about content.',
+    features: [
+      { text: 'Your Brand DNA, followed by every agent' },
+      { text: 'Full agent team: research, ideas, hooks, scripts, quality and market-fit checks, captions' },
+      { text: 'Content Plan: execute your plan or improve it' },
+      { text: 'Content calendar' },
+      { text: 'Support through the in-app feedback form' },
+    ],
   },
   {
     id: 'pro',
     name: 'Pro',
     price: 199,
-    tagline: 'Full autopilot for ambitious creators.',
+    tagline: 'For creators and businesses who post often.',
     popular: true,
-    features: ['1 brand / niche', 'Unlimited AI posts', 'All 10 AI agents', 'All platforms', 'Autopilot mode', 'Advanced analytics', 'Priority support'],
+    features: [
+      { text: 'Everything in Start' },
+      { text: 'More generations each month than Start' },
+      { text: 'Priority support' },
+      { text: 'Autopilot mode', soon: true },
+      { text: 'Analytics', soon: true },
+    ],
   },
   {
     id: 'multi',
     name: 'Multi',
     price: 349,
-    tagline: 'For agencies and multi-brand creators.',
-    features: ['Up to 5 brands / niches', 'Unlimited AI posts', 'All 10 AI agents', 'All platforms', 'Autopilot per brand', 'Team seats (5)', 'Dedicated success manager'],
+    tagline: 'For agencies and multi-brand teams.',
+    features: [
+      { text: 'Everything in Pro' },
+      { text: 'Up to 5 brands', soon: true },
+      { text: 'Team seats', soon: true },
+      { text: 'Autopilot per brand', soon: true },
+    ],
   },
 ]

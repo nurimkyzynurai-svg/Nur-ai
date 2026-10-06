@@ -17,10 +17,13 @@ export default function AuthLayout({ title, subtitle, children, footer }) {
         <div className="absolute -bottom-20 -left-20 h-96 w-96 rounded-full bg-indigo-800 opacity-50 blur-3xl" />
         <div className="relative max-w-md px-12 text-white">
           <p className="text-4xl font-extrabold leading-tight">Go Viral.<br />Effortlessly.</p>
-          <p className="mt-6 text-lg text-indigo-100">
-            “Viply grew my account from 2K to 180K followers in four months. I barely touch it — autopilot does the work.”
-          </p>
-          <p className="mt-4 font-semibold">— Maya R., fitness creator</p>
+          <ul className="mt-8 space-y-4 text-lg text-indigo-100">
+            <li>🧬 Your Brand DNA, followed by every agent</li>
+            <li>🔍 Scripts checked for quality and market fit before you see them</li>
+            <li>🌐 Live market research with source links</li>
+            <li>📋 Your campaign plan, executed or improved with your approval</li>
+          </ul>
+          <p className="mt-8 text-sm text-indigo-200">Early access: 3 free generations on your own brand. Payments aren’t switched on yet.</p>
         </div>
       </div>
     </div>

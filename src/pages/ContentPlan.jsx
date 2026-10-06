@@ -6,6 +6,7 @@ import { EMPTY_BRAND, ProfileSummary, VoiceSetup } from '../components/VoiceSetu
 import { useAuth } from '../context/AuthContext.jsx'
 import { ANY_PLATFORM, GOALS, LANGUAGES, TARGET_PLATFORMS } from '../agents/shared.js'
 import MarketFitBlock from '../components/MarketFit.jsx'
+import { LimitReached, UsagePill } from '../components/EarlyAccess.jsx'
 import { estimateImproveCost, estimatePlanDayCost } from '../agents/costs.js'
 import { brandKey, load, plansKey, removeCalendarPosts, save, upsertCalendarPosts } from '../lib/storage.js'
 import { postStream } from '../lib/stream.js'
@@ -326,7 +327,8 @@ function DayResult({ date, piece, error, onRegenerate, busy }) {
 }
 
 export default function ContentPlan() {
-  const { user } = useAuth()
+  const { user, usage, setUsage } = useAuth()
+  const [limitMessage, setLimitMessage] = useState('')
   const [store, setStore] = useState(() => {
     const s = load(plansKey(user.email), null)
     if (s?.plans?.length) return s
@@ -419,11 +421,15 @@ export default function ContentPlan() {
           onStep(evt)
           if (evt.type === 'result') result = evt.result
           if (evt.type === 'error') throw new Error(evt.message)
+          if (evt.type === 'usage') setUsage(evt.usage)
         },
       })
       if (result) update({ proposal: { strategySummary: result.strategySummary, phases: result.phases, days: result.days, removed: result.removed, notes: result.notes }, approvedDays: null })
     } catch (err) {
-      if (err.name !== 'AbortError') setError(err.message)
+      if (err.code === 'FREE_LIMIT_REACHED') {
+        setLimitMessage(err.message)
+        if (err.usage) setUsage(err.usage)
+      } else if (err.name !== 'AbortError') setError(err.message)
     } finally {
       setRunning(null)
     }
@@ -461,7 +467,7 @@ export default function ContentPlan() {
     const all = finalDays || []
     const days = onlyDates ? all.filter((d) => onlyDates.includes(d.date)) : all
     if (!days.length) return setError(plan.mode === 'improve' ? 'Approve the proposal first.' : 'Add at least one day with content.')
-    if (!window.confirm(`Generate ${days.length} day(s): hooks, script with quality review, and captions for each.\n\nEstimated cost: about ${usd(dayCost.typical * days.length)}, at most ${usd(dayCost.max * days.length)}. Continue?`)) return
+    if (!window.confirm(`Generate ${days.length} day(s): hooks, script with quality review, and captions for each.${usage && !usage.unlimited ? `\nThis uses ${days.length} of your ${usage.remaining} free generations.` : ''}\n\nEstimated cost: about ${usd(dayCost.typical * days.length)}, at most ${usd(dayCost.max * days.length)}. Continue?`)) return
     setError('')
     setSteps([])
     setProgress(Object.fromEntries(days.map((d) => [d.date, { status: 'queued', detail: 'Waiting…' }])))
@@ -474,6 +480,7 @@ export default function ContentPlan() {
         onEvent: (evt) => {
           onStep(evt)
           if (evt.type === 'error') throw new Error(evt.message)
+          if (evt.type === 'usage') setUsage(evt.usage)
           if (evt.type !== 'day') return
           setProgress((p) => ({ ...p, [evt.date]: { status: evt.status, detail: evt.detail } }))
           if (evt.status === 'done') {
@@ -492,7 +499,10 @@ export default function ContentPlan() {
         },
       })
     } catch (err) {
-      if (err.name !== 'AbortError') setError(err.message)
+      if (err.code === 'FREE_LIMIT_REACHED') {
+        setLimitMessage(err.message)
+        if (err.usage) setUsage(err.usage)
+      } else if (err.name !== 'AbortError') setError(err.message)
     } finally {
       setRunning(null)
     }
@@ -760,6 +770,14 @@ export default function ContentPlan() {
               </div>
 
               {error && <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
+              <div className="mt-4 flex justify-center">
+                <UsagePill usage={usage} />
+              </div>
+              {(limitMessage || usage?.remaining === 0) && (
+                <div className="mt-4">
+                  <LimitReached message={limitMessage} />
+                </div>
+              )}
 
               <div className="mt-4 space-y-2">
                 {plan.mode === 'improve' && !plan.proposal && (

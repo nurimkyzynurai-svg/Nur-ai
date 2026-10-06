@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import FeedbackForm from './FeedbackForm.jsx'
 
 /** "Suggest an idea / Report a problem" — a floating button on every dashboard page, opening a dialog. */
@@ -34,7 +35,8 @@ export default function FeedbackButton({ email }) {
         <span className="sm:hidden">Feedback</span>
       </button>
 
-      {open && (
+      {open &&
+        createPortal(
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 p-0 backdrop-blur-[2px] sm:items-center sm:p-4" onMouseDown={(e) => e.target === e.currentTarget && setOpen(false)}>
           <div role="dialog" aria-modal="true" aria-labelledby="feedback-title" className="max-h-[92vh] w-full overflow-y-auto rounded-t-2xl bg-white p-6 shadow-2xl sm:max-w-lg sm:rounded-2xl">
             <div className="mb-4 flex items-start justify-between gap-4">
@@ -50,8 +52,9 @@ export default function FeedbackButton({ email }) {
             </div>
             <FeedbackForm source="dashboard" defaultEmail={email} autoFocus />
           </div>
-        </div>
-      )}
+        </div>,
+          document.body,
+        )}
     </>
   )
 }

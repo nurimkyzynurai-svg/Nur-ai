@@ -160,7 +160,7 @@ export async function runPlanImprove({ plan, niche, goal, language, platform, br
  * Each day uses the Market Brief for its own platform (one shared brief per niche + platform + language).
  * Emits { type: 'day', date, status: 'running' | 'done' | 'error', ... } for each day.
  */
-export async function runPlanGenerate({ plan, niche, goal, language, platform, brandProfile, brandInputs }, emit, { signal } = {}) {
+export async function runPlanGenerate({ plan, niche, goal, language, platform, brandProfile, brandInputs }, emit, { signal, onDayDone } = {}) {
   const usage = emptyUsage()
   const setup = makeStepper(emit, { signal, usage })
   const stats = setup.stats
@@ -196,6 +196,7 @@ export async function runPlanGenerate({ plan, niche, goal, language, platform, b
         for (const k of Object.keys(dayUsage)) usage[k] += dayUsage[k]
         stats.agentCalls += dayStats.agentCalls
         done++
+        await onDayDone?.()
         const detail = `Score ${piece.quality.overall_score}/10${piece.needsReview ? ' — needs review' : ''}${piece.marketFit.marketRisk ? ' · market risk' : ''}`
         emit({ type: 'day', date: day.date, status: 'done', detail, result: { day, ...piece, marketBrief: briefSummary(briefs.get(p)), cost: generationCost(dayUsage, dayStats) } })
       } catch (err) {
