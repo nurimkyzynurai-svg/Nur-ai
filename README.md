@@ -23,8 +23,9 @@ Agent definitions live in `src/agents/`. Each file has a name, role, goal, syste
 | Hook Agent | Writes 5 hooks for the first 3 seconds |
 | Script Agent | Writes the full script. On a rewrite it fixes every feedback item and lists what it changed. It avoids banned clichés and vague claims. For Business it ends with an exact keyword CTA (e.g. «Напишите слово ТОН») |
 | Quality Agent | Scores virality and brand match from 1 to 10 and gives numbered feedback. Below 8, the script goes back to the Script Agent (4 drafts max). If no draft reaches 8, the best draft is shown labeled **Needs review** |
+| Market Fit Agent | After the Quality Agent, checks the script against today's Market Brief: trend alignment, format freshness, platform fit, timing, differentiation and goal fit. Below 7, the script goes back to the Script Agent once. If it's still below 7, it's labeled **market risk**. It does no web searches |
 | Caption Agent | Writes captions and hashtags for TikTok, Instagram, YouTube Shorts, LinkedIn and Threads |
-| Market Intelligence Agent | Researches the live web with Anthropic's web search tool and saves a cited **Market Brief** per niche (cached 24 h) |
+| Market Intelligence Agent | Researches the live web with Anthropic's web search tool and saves a cited **Market Brief** per niche + platform + language. Every client with the same combination shares it, and it's refreshed at most once a day |
 | Director Agent | Runs everything in order (`server/director.js`) and combines the final package |
 
 Every agent's system prompt includes Viply's values (`src/agents/values.js`): quality first, understand the client, be decisive, think like a top specialist for the niche, give every piece a purpose, respect the client's plan, and be honest.
@@ -44,20 +45,25 @@ The backend (`server/`) is the only place the Anthropic API key is read. It come
 
 ## Market Intel
 
+- **Every generation uses a Market Brief** for the client's niche + target platform + language. If none exists from the last 24 hours, one is researched on demand and shared with every client who has that combination. If web search fails, generation continues and is marked **Market data unavailable**: no trends are claimed and Market Fit is skipped. Failures are retried after 30 minutes, not on every request.
+- **A compact brief** goes to the Trend, Creative Director, Hook, Script and Quality agents. It covers algorithm signals, rising formats, saturated formats and current tactics, plus topics and audience interests for the agents that generate ideas. It's context, not orders: Brand DNA, vision and plan come first.
+- **"Why this can work now"** on the result shows the Market Fit score, the reason it can work, the main risk, one improvement, and source links. Sources that back no verified item are labeled **Unverified**.
+- **Calls per generation** (Create Content, brief cached, Brand DNA saved): typically **9 Claude calls**. It's 12 if Market Fit sends the script back once, and up to **18** in the worst case (+1 the first time, when the Brand DNA is built). A new brief adds 2–4 research calls and up to 5 web searches, at most once a day per combination. The server logs every generation as `[generate] … N Claude calls (… agent + … research), M web searches, ~$X`.
+
 - **Daily Market Brief per niche** (`src/agents/marketIntelAgent.js`). It covers platform algorithm changes (Instagram, TikTok, YouTube, Threads, LinkedIn, X), trending formats, sounds and topics, marketing and sales tactics, competitor activity and audience interests.
   - Every item has source links, and code marks anything without a real source as **Unverified** (`server/research.js`).
   - The Trend, Script, Quality and Director agents get the latest brief. A brief older than 24 hours is refreshed when a client generates content.
 - **Weekly AI & Market Report** for the founder (`src/agents/founderReportAgent.js`). It covers new AI video, voice and image models, competitor updates, platform API changes, and concrete suggestions for Viply.
 - **Market Intel admin tab** (`/admin/market-intel`). It's visible to emails in `VITE_ADMIN_EMAILS` and unlocked with `ADMIN_TOKEN`. It shows reports, briefs, the run log and costs.
 - **Cost control:** each run has a search cap (`MARKET_BRIEF_MAX_SEARCHES`, `FOUNDER_REPORT_MAX_SEARCHES`) and there's a daily cap on scheduled briefs. Every run records its token and search usage and estimated cost (`server/cost.js`).
-- **Scheduler:** an hourly check inside the server refreshes briefs for niches used in the last 14 days and writes the weekly report. Data is saved as JSON in `data/` (git-ignored).
+- **Scheduler:** `MARKET_INTEL_SCHEDULER=on` turns on an hourly check that refreshes briefs for combinations used in the last 14 days and writes the weekly report. The default is `off`: briefs are made on demand, and the admin tab has **Refresh now** and **Run now** buttons. The server logs at start whether the scheduler is on or off. Data is saved as JSON in `data/` (git-ignored).
 
 ## Getting started
 
 ```bash
 npm install
 cp .env.example .env   # then put your key in .env
-npm run dev            # website on http://localhost:5173 + API server on :8787
+npm run dev            # website on http://localhost:5173 + API server on :8787 (API restarts only on changes in server/ or src/agents/)
 npm run build && npm start   # production: one server on :8787 serves the site and the API
 ```
 

@@ -5,6 +5,7 @@ import { MOCK } from './claude.js'
 import { costOf, emptyUsage, estimateResearchCost } from './cost.js'
 import { runResearchAgent, validateItems } from './research.js'
 import { readJSON, updateJSON } from './store.js'
+import { ANY_PLATFORM, TARGET_PLATFORMS } from '../src/agents/shared.js'
 
 const DAY = 24 * 60 * 60 * 1000
 const num = (v, d) => (Number.isFinite(Number(v)) && Number(v) > 0 ? Number(v) : d)
@@ -13,19 +14,30 @@ export const CONFIG = {
   briefMaxSearches: num(process.env.MARKET_BRIEF_MAX_SEARCHES, 5),
   reportMaxSearches: num(process.env.FOUNDER_REPORT_MAX_SEARCHES, 10),
   maxScheduledBriefsPerDay: num(process.env.MARKET_INTEL_MAX_NICHES_PER_DAY, 10),
-  schedulerEnabled: process.env.MARKET_INTEL_SCHEDULER !== 'false',
+  // "on" turns on the daily briefs + weekly founder report. Anything else (or missing) = off.
+  schedulerEnabled: String(process.env.MARKET_INTEL_SCHEDULER || 'off').trim().toLowerCase() === 'on',
+  failureBackoffMs: 30 * 60 * 1000,
   briefTtlMs: DAY,
   reportTtlMs: 7 * DAY,
   keepBriefs: 14,
   keepReports: 12,
 }
 
-export const nicheKey = (niche) => niche.trim().toLowerCase().replace(/\s+/g, ' ')
-const briefFile = (niche) => `briefs/${crypto.createHash('sha1').update(nicheKey(niche)).digest('hex').slice(0, 16)}.json`
+const norm = (v) => String(v || '').trim().replace(/\s+/g, ' ')
+export const nicheKey = (niche) => norm(niche).toLowerCase()
+
+/** A brief is shared by every client with the same niche + target platform + language. */
+export function comboOf({ niche, platform, language }) {
+  const p = TARGET_PLATFORMS.find((x) => x.toLowerCase() === norm(platform).toLowerCase()) || ANY_PLATFORM
+  return { niche: norm(niche), platform: p, language: norm(language) || 'English' }
+}
+export const comboKey = (c) => `${nicheKey(c.niche)}|${c.platform.toLowerCase()}|${c.language.toLowerCase()}`
+const briefFile = (c) => `briefs/${crypto.createHash('sha1').update(comboKey(c)).digest('hex').slice(0, 16)}.json`
+const comboLabel = (c) => `${c.niche} · ${c.platform} · ${c.language}`
 
 // What is running right now (for the admin page), and de-duplication of identical runs.
 const inflight = new Map()
-export const runningJobs = () => [...inflight.values()].map(({ type, niche, startedAt }) => ({ type, niche, startedAt }))
+export const runningJobs = () => [...inflight.values()].map(({ type, niche, platform, language, startedAt }) => ({ type, niche, platform, language, startedAt }))
 
 function once(key, meta, fn) {
   if (!inflight.has(key)) {
@@ -39,32 +51,33 @@ async function logRun(entry) {
   await updateJSON('runs.json', [], (runs) => [{ at: new Date().toISOString(), ...entry }, ...runs].slice(0, 500))
 }
 
-// ---------- Market Briefs (per niche, daily) ----------
+// ---------- Market Briefs (per niche + platform + language, daily, shared) ----------
 
-export async function trackNiche(niche) {
-  const key = nicheKey(niche)
-  await updateJSON('niches.json', {}, (all) => ({ ...all, [key]: { ...all[key], niche: niche.trim(), lastRequestedAt: new Date().toISOString() } }))
+export async function trackCombo(input) {
+  const c = comboOf(input)
+  await updateJSON('niches.json', {}, (all) => ({ ...all, [comboKey(c)]: { ...all[comboKey(c)], ...c, lastRequestedAt: new Date().toISOString() } }))
 }
 
-export async function listBriefs(niche) {
-  return readJSON(briefFile(niche), [])
+export async function listBriefs(input) {
+  return readJSON(briefFile(comboOf(input)), [])
 }
 
-export async function latestBrief(niche) {
-  return (await listBriefs(niche))[0] || null
+export async function latestBrief(input) {
+  return (await listBriefs(input))[0] || null
 }
 
 const isFresh = (item, ttl) => item && Date.now() - new Date(item.createdAt).getTime() < ttl
 
-export function runBrief(niche, { trigger = 'manual' } = {}) {
-  return once(`brief:${nicheKey(niche)}`, { type: 'brief', niche }, async () => {
+export function runBrief(input, { trigger = 'manual' } = {}) {
+  const c = comboOf(input)
+  return once(`brief:${comboKey(c)}`, { type: 'brief', ...c }, async () => {
     const started = Date.now()
     const maxSearches = CONFIG.briefMaxSearches
     try {
-      const { data, sources, usage } = MOCK ? await mockResearch('brief') : await runResearchAgent(marketIntelAgent, { niche }, { maxSearches })
+      const { data, sources, usage } = MOCK ? await mockResearch('brief', c) : await runResearchAgent(marketIntelAgent, c, { maxSearches })
       const brief = {
         id: crypto.randomUUID(),
-        niche: niche.trim(),
+        ...c,
         createdAt: new Date().toISOString(),
         trigger,
         mock: MOCK,
@@ -74,31 +87,43 @@ export function runBrief(niche, { trigger = 'manual' } = {}) {
         durationMs: Date.now() - started,
       }
       for (const [key] of BRIEF_SECTIONS) brief[key] = validateItems(data[key] || [], sources)
-      await updateJSON(briefFile(niche), [], (list) => [brief, ...list].slice(0, CONFIG.keepBriefs))
-      await updateJSON('niches.json', {}, (all) => ({ ...all, [nicheKey(niche)]: { ...all[nicheKey(niche)], niche: niche.trim(), lastBriefAt: brief.createdAt } }))
-      await logRun({ type: 'brief', niche, ok: true, usd: brief.cost.usd, searches: usage.webSearches, trigger })
+      await updateJSON(briefFile(c), [], (list) => [brief, ...list].slice(0, CONFIG.keepBriefs))
+      await updateJSON('niches.json', {}, (all) => ({ ...all, [comboKey(c)]: { ...all[comboKey(c)], ...c, lastBriefAt: brief.createdAt } }))
+      await logRun({ type: 'brief', niche: comboLabel(c), ok: true, usd: brief.cost.usd, searches: usage.webSearches, trigger })
       return brief
     } catch (err) {
-      await logRun({ type: 'brief', niche, ok: false, error: err.message, trigger })
+      await logRun({ type: 'brief', niche: comboLabel(c), ok: false, error: err.message, trigger })
       throw err
     }
   })
 }
 
+// Recent research failures per combination, so a broken web search isn't retried on every generation.
+const recentFailures = new Map()
+
 /**
- * Used by the Director before writing content: returns today's brief, researching it
- * first if the cached one is older than 24 hours. Returns null if research fails.
+ * Used before writing content: returns today's brief for this niche + platform + language, researching it first
+ * if there is none from the last 24 hours. If research fails, returns { brief: null, unavailable: true } —
+ * the agents then work without market data instead of guessing.
  */
-export async function getFreshBrief(niche, { onResearch } = {}) {
-  const cached = await latestBrief(niche)
+export async function getFreshBrief(input, { onResearch } = {}) {
+  const c = comboOf(input)
+  const cached = await latestBrief(c)
   if (isFresh(cached, CONFIG.briefTtlMs)) return { brief: cached, cached: true }
+
+  const failedAt = recentFailures.get(comboKey(c))
+  if (failedAt && Date.now() - failedAt < CONFIG.failureBackoffMs) {
+    return { brief: null, unavailable: true, error: 'Market research failed recently; trying again later.' }
+  }
   onResearch?.(CONFIG.briefMaxSearches)
   try {
-    return { brief: await runBrief(niche, { trigger: 'on-demand' }), cached: false }
+    const brief = await runBrief(c, { trigger: 'on-demand' })
+    recentFailures.delete(comboKey(c))
+    return { brief, cached: false, research: brief.cost }
   } catch (err) {
-    console.error('Market brief failed:', err.message)
-    // A stale brief is better than none; the agents see its date.
-    return { brief: cached, cached: true, error: err.message }
+    console.error(`Market brief failed for ${comboLabel(c)}:`, err.message)
+    recentFailures.set(comboKey(c), Date.now())
+    return { brief: null, unavailable: true, error: err.message, research: err.usage || null }
   }
 }
 
@@ -147,8 +172,8 @@ export async function overview() {
   const recent = runs.filter((r) => new Date(r.at).getTime() > since)
   const briefs = await Promise.all(
     Object.values(niches).map(async (n) => {
-      const b = await latestBrief(n.niche)
-      return { niche: n.niche, lastRequestedAt: n.lastRequestedAt || null, latest: b }
+      const c = comboOf(n)
+      return { ...c, key: comboKey(c), lastRequestedAt: n.lastRequestedAt || null, latest: await latestBrief(c) }
     }),
   )
   briefs.sort((a, b) => (b.lastRequestedAt || '').localeCompare(a.lastRequestedAt || ''))
@@ -188,9 +213,9 @@ async function tick() {
     .sort((a, b) => b.lastRequestedAt.localeCompare(a.lastRequestedAt))
   for (const n of niches) {
     if (budget <= 0) break
-    if (isFresh(await latestBrief(n.niche), CONFIG.briefTtlMs)) continue
+    if (isFresh(await latestBrief(n), CONFIG.briefTtlMs)) continue
     budget--
-    await runBrief(n.niche, { trigger: 'scheduled' }).catch((err) => console.error(`Scheduled brief for "${n.niche}" failed:`, err.message))
+    await runBrief(n, { trigger: 'scheduled' }).catch((err) => console.error(`Scheduled brief for "${comboLabel(comboOf(n))}" failed:`, err.message))
   }
 
   // Weekly: founder report.
@@ -200,7 +225,9 @@ async function tick() {
 }
 
 export function startScheduler() {
-  if (!CONFIG.schedulerEnabled) return console.log('Market Intel scheduler is off (MARKET_INTEL_SCHEDULER=false).')
+  if (!CONFIG.schedulerEnabled) {
+    return console.log('Market Intel scheduler: OFF — briefs are created on demand during generation (set MARKET_INTEL_SCHEDULER=on to enable).')
+  }
   let busy = false
   const run = async () => {
     if (busy) return
@@ -215,32 +242,45 @@ export function startScheduler() {
   }
   setTimeout(run, 60 * 1000) // first check a minute after start
   setInterval(run, 60 * 60 * 1000).unref() // then every hour
-  console.log('Market Intel scheduler on: daily briefs per active niche, weekly founder report.')
+  console.log('Market Intel scheduler: ON — daily briefs for active niche/platform/language combinations, weekly founder report.')
 }
 
 // ---------- Sample mode (MOCK_AI) ----------
 
-async function mockResearch(kind) {
+async function mockResearch(kind, c = {}) {
   await new Promise((r) => setTimeout(r, 900))
+  const niche = c.niche || 'your niche'
+  const platform = c.platform || ANY_PLATFORM
   const sources = [
-    { id: 'S1', url: 'https://example.com/sample-platform-update', title: 'SAMPLE source — mock mode, not real', pageAge: '' },
-    { id: 'S2', url: 'https://example.com/sample-trend-roundup', title: 'SAMPLE source — mock mode, not real', pageAge: '' },
+    { id: 'S1', url: 'https://example.com/sample/platform-update', title: `Sample source: ${platform} creator update (mock mode)`, pageAge: '' },
+    { id: 'S2', url: 'https://example.com/sample/niche-trends', title: `Sample source: what ${niche} audiences engage with (mock mode)`, pageAge: '' },
+    { id: 'S3', url: 'https://example.com/sample/marketing-tactics', title: 'Sample source: short-form marketing tactics (mock mode)', pageAge: '' },
   ]
-  const item = (title, detail, platform, ids, verified = true) => ({ title, detail, platform, source_ids: ids, verified, date_seen: '' })
-  const usage = { ...emptyUsage(), calls: 2, inputTokens: 40000, outputTokens: 9000, webSearches: kind === 'brief' ? 4 : 8 }
+  const item = (title, detail, plat, ids, verified = true) => ({ title, detail, platform: plat, source_ids: ids, verified, date_seen: '' })
+  const usage = emptyUsage() // sample mode makes no API calls and no web searches
   if (kind === 'brief') {
     return {
       sources,
       usage,
       data: {
-        summary: 'SAMPLE BRIEF (mock mode). This is placeholder text so you can see the layout — no real research was done.',
-        platform_updates: [item('Sample: platform favors saves and shares', 'Placeholder item showing how a platform update looks.', 'Instagram', ['S1'])],
-        trending_formats: [item('Sample: myth-vs-fact videos', 'Placeholder item for a trending format.', 'TikTok', ['S2'])],
+        summary: `Sample brief (mock mode, no real research): ${platform} is rewarding original, watch-through-friendly short videos; audiences in ${niche} respond to honest, specific answers and are tired of generic list videos.`,
+        platform_updates: [
+          item('Original content over reposts', `${platform} says it ranks original videos above reposted or watermarked clips.`, platform, ['S1']),
+          item('Watch-through matters', 'Videos that are watched to the end get shown to more people; tight edits help.', platform, ['S1']),
+        ],
+        trending_formats: [
+          item('Show the result first', `Creators in ${niche} open with the outcome, then explain how.`, platform, ['S2']),
+          item('Honest myth-vs-fact', 'Short videos that correct a common belief with a visible example.', platform, ['S2']),
+        ],
+        saturated_formats: [item('Generic “top 5 tips” lists', `Plain list videos are everywhere in ${niche} and get skipped.`, platform, ['S2'])],
         trending_sounds: [],
-        trending_topics: [item('Sample: an unconfirmed topic', 'Placeholder item that is not verified.', '', [], false)],
-        marketing_tactics: [item('Sample: comment-keyword lead magnets', 'Placeholder item for a tactic.', 'Instagram', ['S2'])],
+        trending_topics: [item('A question audiences keep asking', `People in ${niche} are asking for clear, practical answers.`, '', ['S2'])],
+        marketing_tactics: [
+          item('Comment-keyword offers', 'Ending with “comment a keyword to get the guide” turns viewers into leads.', '', ['S3']),
+          item('A claimed rule change', 'Some blogs claim a new reach rule; no official source found.', platform, [], false),
+        ],
         competitor_activity: [],
-        audience_interests: [],
+        audience_interests: [item('Behind the scenes', 'Audiences engage with how things are really made or done.', '', ['S2'])],
       },
     }
   }

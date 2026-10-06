@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import DashboardHeader from '../components/DashboardHeader.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
-import { GOALS, LANGUAGES } from '../agents/shared.js'
+import { GOALS, LANGUAGES, TARGET_PLATFORMS } from '../agents/shared.js'
+import MarketFitBlock from '../components/MarketFit.jsx'
 import { Card, CopyButton } from '../components/ui.jsx'
 import { EMPTY_BRAND, ProfileSummary, VoiceSetup } from '../components/VoiceSetup.jsx'
 import { brandKey as brandStorageKey, load, save } from '../lib/storage.js'
@@ -15,6 +16,7 @@ const PIPELINE = [
   ['hook', 'Hook Agent', '🪝'],
   ['script', 'Script Agent', '📝'],
   ['quality', 'Quality Agent', '🔍'],
+  ['marketFit', 'Market Fit Agent', '📊'],
   ['caption', 'Caption Agent', '✍️'],
   ['director', 'Director Agent', '🎬'],
 ]
@@ -118,6 +120,8 @@ function Results({ result }) {
           </div>
         )}
       </Card>
+
+      <MarketFitBlock fit={result.marketFit} brief={result.marketBrief} />
 
       {plan && (
         <Card title="Director’s summary">
@@ -258,7 +262,7 @@ function Results({ result }) {
         <p className="mt-2 text-xs text-slate-400">Call to action: {caption.cta}</p>
       </Card>
 
-      <Card title="Market Brief used">
+      <Card title={result.marketBrief ? `Market Brief used · ${result.marketBrief.platform} · ${result.marketBrief.language}` : 'Market Brief'}>
         {result.marketBrief ? (
           <>
             {result.marketBrief.mock && <p className="mb-2 text-xs text-slate-500">Sample data (MOCK_AI mode) — no real research was done.</p>}
@@ -277,7 +281,7 @@ function Results({ result }) {
             </ul>
           </>
         ) : (
-          <p className="text-sm text-amber-700">No fresh market research was available, so the ideas are evergreen rather than trend-based.</p>
+          <p className="text-sm text-amber-700">Market data unavailable — the ideas are evergreen rather than trend-based, and no trends were claimed.</p>
         )}
       </Card>
 
@@ -311,6 +315,7 @@ export default function CreateContent() {
   const [goal, setGoal] = useState(saved?.goal || 'blogger')
   const [language, setLanguage] = useState(saved?.language || 'English')
   const [customLanguage, setCustomLanguage] = useState('')
+  const [platform, setPlatform] = useState(TARGET_PLATFORMS.includes(saved?.platform) ? saved.platform : TARGET_PLATFORMS[0])
   const [brand, setBrand] = useState(saved?.inputs || EMPTY_BRAND)
   const [profile, setProfile] = useState(saved?.profile || null)
   const [editingBrand, setEditingBrand] = useState(!saved?.profile)
@@ -320,7 +325,7 @@ export default function CreateContent() {
   const [result, setResult] = useState(null)
   const abortRef = useRef(null)
 
-  useEffect(() => save(brandKey, { niche, goal, language, inputs: brand, profile }), [brandKey, niche, goal, language, brand, profile])
+  useEffect(() => save(brandKey, { niche, goal, language, platform, inputs: brand, profile }), [brandKey, niche, goal, language, platform, brand, profile])
   useEffect(() => () => abortRef.current?.abort(), [])
 
   function updateBrand(next) {
@@ -364,7 +369,7 @@ export default function CreateContent() {
     try {
       await postStream(
         '/api/generate',
-        { niche, goal, language: lang, brandProfile: profile, brandInputs: profile ? undefined : brand },
+        { niche, goal, language: lang, platform, brandProfile: profile, brandInputs: profile ? undefined : brand },
         { onEvent, signal: controller.signal },
       )
     } catch (err) {
@@ -415,6 +420,16 @@ export default function CreateContent() {
                   </div>
                 </fieldset>
                 <div className="grid gap-2 sm:grid-cols-2">
+                  <label className="block">
+                    <span className="text-sm font-medium text-slate-700">Target platform</span>
+                    <select
+                      value={platform}
+                      onChange={(e) => setPlatform(e.target.value)}
+                      className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 outline-none focus:border-indigo-500"
+                    >
+                      {TARGET_PLATFORMS.map((p) => <option key={p}>{p}</option>)}
+                    </select>
+                  </label>
                   <label className="block">
                     <span className="text-sm font-medium text-slate-700">Content language</span>
                     <select

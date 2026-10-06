@@ -1,3 +1,4 @@
+import { briefForPrompt } from './marketIntelAgent.js'
 import { z } from 'zod'
 import { COMMON_RULES, buildBriefing } from './shared.js'
 
@@ -22,6 +23,7 @@ For the chosen content idea, write exactly 5 different hooks for the first 3 sec
 - Blogger goal: aim for curiosity, emotion and comments. Business goal: call out the buyer's pain or desire.
 - If the idea contains a "creative_concept" from the Creative Director (and "director_notes"), the hooks must open THAT concept —
   its angle, emotional core and visual signature.
+- Use the Market Brief's algorithm signals and rising formats as context; avoid saturated hook styles unless you flip them.
 - Sound exactly like the client's Brand DNA. Never break a "never_do" rule.
 
 ## Output format
@@ -55,6 +57,8 @@ ${COMMON_RULES}`,
 
   buildUserMessage({ idea, ...ctx }) {
     return `${buildBriefing(ctx)}
+
+${briefForPrompt(ctx.marketBrief)}
 
 ## Chosen content idea
 ${JSON.stringify(idea, null, 2)}

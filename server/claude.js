@@ -69,8 +69,23 @@ async function mockRun(agent, input, signal) {
     })
   })
   if (agent.id === 'planImprover') return mockImprove(input)
-  const niche = input.niche || 'your niche'
-  const out = JSON.parse(JSON.stringify(agent.exampleOutput).replaceAll('{niche}', niche.replace(/["\\]/g, '')))
+  const clean = (v, d) => String(v || d).replace(/["\\]/g, '')
+  const out = JSON.parse(
+    JSON.stringify(agent.exampleOutput)
+      .replaceAll('{niche}', clean(input.niche, 'your niche'))
+      .replaceAll('{platform}', clean(input.platform, 'the platform')),
+  )
+  if (agent.id === 'marketFit' && (input.marketFitRound === 1 || MOCK_ALWAYS_FAIL)) {
+    // First check scores below 7 so the one-time Market Fit rewrite is visible.
+    Object.assign(out, {
+      market_fit_score: 6,
+      main_risk: `[Sample] The opening uses a format the brief lists as overused in ${clean(input.niche, 'this niche')}.`,
+      risk_source_ids: ['S2'],
+      improvement: '[Sample] Open with the result on screen instead of a generic list intro.',
+      rewrite_instruction: 'Replace the generic list-style opening with the visible result first, then explain.',
+    })
+    out.dimensions = out.dimensions.map((d) => (d.key === 'format_saturation' ? { ...d, score: 4, note: '[Sample] Uses a saturated list format.' } : d))
+  }
   if (agent.id === 'quality' && (input.attempt === 1 || MOCK_ALWAYS_FAIL)) {
     // Fail the draft so the Script ⇄ Quality loop (and "needs review") is visible.
     Object.assign(out, {

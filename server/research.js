@@ -96,6 +96,15 @@ export function validateItems(items, sources) {
 /** Research + structure for one research agent. Returns { data, sources, usage, searchErrors }. */
 export async function runResearchAgent(agent, input, { maxSearches }) {
   const usage = emptyUsage()
+  try {
+    return await researchAndStructure(agent, input, { maxSearches, usage })
+  } catch (err) {
+    err.usage = usage // so callers can still count what a failed run spent
+    throw err
+  }
+}
+
+async function researchAndStructure(agent, input, { maxSearches, usage }) {
   const today = new Date().toISOString().slice(0, 10)
   const found = await research({
     system: agent.researchSystemPrompt,

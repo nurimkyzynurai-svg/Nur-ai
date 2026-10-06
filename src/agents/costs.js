@@ -13,11 +13,11 @@ const CALL = { inputTokens: 8000, outputTokens: 2500 }
 const callUsd = (CALL.inputTokens * PRICES.inputPerMTok + CALL.outputTokens * PRICES.outputPerMTok) / 1e6
 
 /**
- * Rough cost of producing one Content Plan day: hooks + script + quality review + captions,
- * plus up to 3 rewrite rounds (script + review each) in the worst case.
+ * Rough cost of producing one Content Plan day: hooks + script + quality review + market fit + captions
+ * (typically 6–7 calls), up to 13 calls in the worst case (3 quality rewrite rounds + 1 market-fit round).
  */
 export function estimatePlanDayCost() {
-  return { typical: round(callUsd * 6), max: round(callUsd * 10) }
+  return { typical: round(callUsd * 7), max: round(callUsd * 13) }
 }
 
 /** Rough cost of the "Improve it" step (one large Creative Director call). */

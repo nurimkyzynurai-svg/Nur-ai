@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import DashboardHeader from '../components/DashboardHeader.jsx'
-import { BRIEF_SECTIONS } from '../agents/shared.js'
+import { ANY_PLATFORM, BRIEF_SECTIONS, LANGUAGES, TARGET_PLATFORMS } from '../agents/shared.js'
 
 const TOKEN_KEY = 'viply_admin_token'
 
@@ -227,6 +227,8 @@ export default function MarketIntel() {
   const [tab, setTab] = useState('report')
   const [openNiche, setOpenNiche] = useState(null)
   const [newNiche, setNewNiche] = useState('')
+  const [newPlatform, setNewPlatform] = useState(ANY_PLATFORM)
+  const [newLanguage, setNewLanguage] = useState('English')
   const [notice, setNotice] = useState('')
 
   const load = useCallback(async () => {
@@ -268,7 +270,10 @@ export default function MarketIntel() {
     }
   }
 
-  const isRunning = (type, niche) => running.some((r) => r.type === type && (!niche || r.niche?.toLowerCase() === niche.toLowerCase()))
+  const same = (a = '', b = '') => a.toLowerCase() === b.toLowerCase()
+  const isRunning = (type, combo) =>
+    running.some((r) => r.type === type && (!combo || (same(r.niche, combo.niche) && same(r.platform, combo.platform) && same(r.language, combo.language))))
+  const comboLabel = (c) => `“${c.niche}” · ${c.platform} · ${c.language}`
   const report = data?.reports?.[0]
   const cfg = data?.config
 
@@ -310,7 +315,7 @@ export default function MarketIntel() {
                 ['Spent, last 30 days', usd(data.costs.last30DaysUsd), `${data.costs.runs} runs · ${data.costs.failures} failed`],
                 ['Per niche brief', `≤ ${usd(cfg.briefEstimateUsd)}`, `max ${cfg.briefMaxSearches} searches`],
                 ['Per founder report', `≤ ${usd(cfg.reportEstimateUsd)}`, `max ${cfg.reportMaxSearches} searches`],
-                ['Scheduler', cfg.schedulerEnabled ? 'On' : 'Off', `≤ ${cfg.maxScheduledBriefsPerDay} niche briefs / day`],
+                ['Scheduler', cfg.schedulerEnabled ? 'On' : 'Off', cfg.schedulerEnabled ? `≤ ${cfg.maxScheduledBriefsPerDay} niche briefs / day` : 'On demand + Refresh now'],
               ].map(([label, value, hint]) => (
                 <div key={label} className="rounded-2xl border border-slate-200 bg-white p-5">
                   <p className="text-sm text-slate-500">{label}</p>
@@ -358,62 +363,83 @@ export default function MarketIntel() {
 
             {tab === 'briefs' && (
               <Card
-                title="Market Briefs by niche"
+                title="Market Briefs (niche · platform · language)"
                 action={
                   <form
                     onSubmit={(e) => {
                       e.preventDefault()
-                      if (newNiche.trim()) start('/api/admin/briefs/run', { niche: newNiche.trim() }, cfg.briefEstimateUsd, `Market Brief for “${newNiche.trim()}”`)
+                      const combo = { niche: newNiche.trim(), platform: newPlatform, language: newLanguage }
+                      if (combo.niche) start('/api/admin/briefs/run', combo, cfg.briefEstimateUsd, `Market Brief for ${comboLabel(combo)}`)
                       setNewNiche('')
                     }}
-                    className="flex gap-2"
+                    className="flex flex-wrap gap-2"
                   >
                     <input
                       value={newNiche}
                       onChange={(e) => setNewNiche(e.target.value)}
                       maxLength={200}
-                      placeholder="Add a niche"
-                      className="w-44 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 sm:w-60"
+                      placeholder="Niche"
+                      className="w-40 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 sm:w-52"
                     />
+                    <select value={newPlatform} onChange={(e) => setNewPlatform(e.target.value)} className="rounded-lg border border-slate-300 px-2 py-2 text-sm" aria-label="Platform">
+                      {[ANY_PLATFORM, ...TARGET_PLATFORMS].map((p) => (
+                        <option key={p}>{p}</option>
+                      ))}
+                    </select>
+                    <select value={newLanguage} onChange={(e) => setNewLanguage(e.target.value)} className="rounded-lg border border-slate-300 px-2 py-2 text-sm" aria-label="Language">
+                      {LANGUAGES.map((l) => (
+                        <option key={l}>{l}</option>
+                      ))}
+                    </select>
                     <button className="rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-700">Research</button>
                   </form>
                 }
               >
+                <p className="mb-3 text-xs text-slate-500">
+                  Briefs are shared by every client with the same niche, platform and language, and refreshed at most once a day. With the scheduler off,
+                  they are made on demand when a client generates content — or here with “Refresh now”.
+                </p>
                 {data.briefs.length === 0 ? (
-                  <p className="text-sm text-slate-500">No niches yet. A niche is added automatically the first time a client generates content for it.</p>
+                  <p className="text-sm text-slate-500">No briefs yet. One is added automatically the first time a client generates content.</p>
                 ) : (
                   <ul className="divide-y divide-slate-100">
-                    {data.briefs.map(({ niche, latest, lastRequestedAt }) => (
-                      <li key={niche} className="py-3">
-                        <div className="flex flex-wrap items-center justify-between gap-3">
-                          <button onClick={() => setOpenNiche(openNiche === niche ? null : niche)} className="text-left">
-                            <p className="font-medium text-slate-900">{niche}</p>
-                            <p className="text-xs text-slate-500">
-                              {latest ? `Brief ${when(latest.createdAt)} · ${latest.sources.length} sources · ${usd(latest.cost?.usd)}` : 'No brief yet'} · last used {when(lastRequestedAt)}
-                            </p>
-                          </button>
-                          <div className="flex items-center gap-2">
-                            {latest && (
-                              <button onClick={() => setOpenNiche(openNiche === niche ? null : niche)} className="text-sm font-medium text-indigo-600">
-                                {openNiche === niche ? 'Hide' : 'View'}
-                              </button>
-                            )}
-                            <button
-                              disabled={isRunning('brief', niche)}
-                              onClick={() => start('/api/admin/briefs/run', { niche }, cfg.briefEstimateUsd, `Market Brief for “${niche}”`)}
-                              className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 hover:border-indigo-300 hover:text-indigo-600 disabled:opacity-60"
-                            >
-                              {isRunning('brief', niche) ? 'Researching…' : 'Refresh'}
+                    {data.briefs.map((b) => {
+                      const { key, latest, lastRequestedAt } = b
+                      const combo = { niche: b.niche, platform: b.platform, language: b.language }
+                      return (
+                        <li key={key} className="py-3">
+                          <div className="flex flex-wrap items-center justify-between gap-3">
+                            <button onClick={() => setOpenNiche(openNiche === key ? null : key)} className="min-w-0 text-left">
+                              <p className="font-medium text-slate-900">
+                                {b.niche} <span className="text-sm font-normal text-slate-500">· {b.platform} · {b.language}</span>
+                              </p>
+                              <p className="text-xs text-slate-500">
+                                {latest ? `Brief ${when(latest.createdAt)} · ${latest.sources.length} sources · ${usd(latest.cost?.usd)}` : 'No brief yet'} · last used {when(lastRequestedAt)}
+                              </p>
                             </button>
+                            <div className="flex items-center gap-2">
+                              {latest && (
+                                <button onClick={() => setOpenNiche(openNiche === key ? null : key)} className="text-sm font-medium text-indigo-600">
+                                  {openNiche === key ? 'Hide' : 'View'}
+                                </button>
+                              )}
+                              <button
+                                disabled={isRunning('brief', combo)}
+                                onClick={() => start('/api/admin/briefs/run', combo, cfg.briefEstimateUsd, `Market Brief for ${comboLabel(combo)}`)}
+                                className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 hover:border-indigo-300 hover:text-indigo-600 disabled:opacity-60"
+                              >
+                                {isRunning('brief', combo) ? 'Researching…' : 'Refresh now'}
+                              </button>
+                            </div>
                           </div>
-                        </div>
-                        {openNiche === niche && latest && (
-                          <div className="mt-4 rounded-xl bg-slate-50 p-4">
-                            <Brief brief={latest} />
-                          </div>
-                        )}
-                      </li>
-                    ))}
+                          {openNiche === key && latest && (
+                            <div className="mt-4 rounded-xl bg-slate-50 p-4">
+                              <Brief brief={latest} />
+                            </div>
+                          )}
+                        </li>
+                      )
+                    })}
                   </ul>
                 )}
               </Card>

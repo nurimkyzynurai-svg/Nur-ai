@@ -62,7 +62,7 @@ ${COMMON_RULES}`,
   buildUserMessage(ctx) {
     return `${buildBriefing(ctx)}
 
-${briefForPrompt(ctx.marketBrief)}
+${briefForPrompt(ctx.marketBrief, { forIdeas: true })}
 
 Suggest 10 trending content ideas for this client and pick the best one to produce now.`
   },

@@ -2,12 +2,12 @@ import 'dotenv/config'
 import express from 'express'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { GOALS, LANGUAGES } from '../src/agents/index.js'
+import { ANY_PLATFORM, GOALS, TARGET_PLATFORMS } from '../src/agents/index.js'
 import { runDirector } from './director.js'
 import { cleanPlan, runPlanGenerate, runPlanImprove } from './plan.js'
 import crypto from 'node:crypto'
 import { friendlyError, MOCK } from './claude.js'
-import { listBriefs, overview, runBrief, runFounderReport, startScheduler, trackNiche } from './marketIntel.js'
+import { comboOf, listBriefs, overview, runBrief, runFounderReport, startScheduler, trackCombo } from './marketIntel.js'
 
 const app = express()
 app.use(express.json({ limit: '200kb' }))
@@ -18,15 +18,17 @@ app.get('/api/health', (_req, res) => {
 
 // Reads the fields every content request shares. Returns an error message or the clean input.
 function readContentRequest(body = {}) {
-  const { niche, goal, language, brandProfile, brandInputs } = body
+  const { niche, goal, language, platform, brandProfile, brandInputs } = body
   if (typeof niche !== 'string' || !niche.trim() || niche.length > 200) return { error: 'Please enter your niche (up to 200 characters).' }
   if (!GOALS[goal]) return { error: 'Goal must be "blogger" or "business".' }
   if (typeof language !== 'string' || !language.trim() || language.length > 40) return { error: 'Please choose a content language.' }
+  if (platform != null && platform !== '' && platform !== ANY_PLATFORM && !TARGET_PLATFORMS.includes(platform)) return { error: 'Please choose a target platform.' }
   return {
     input: {
       niche: niche.trim(),
       goal,
       language: language.trim(),
+      platform: TARGET_PLATFORMS.includes(platform) ? platform : ANY_PLATFORM,
       brandProfile: brandProfile && typeof brandProfile === 'object' ? brandProfile : null,
       brandInputs: {
         examplePosts: Array.isArray(brandInputs?.examplePosts) ? brandInputs.examplePosts.slice(0, 5).map(String) : [],
@@ -106,22 +108,32 @@ app.get('/api/admin/market-intel', requireAdmin, async (_req, res) => {
   res.json(await overview())
 })
 
+// A niche + platform + language combination from the admin page.
+function readCombo(src = {}) {
+  if (!validNiche(src.niche)) return null
+  if (src.language != null && (typeof src.language !== 'string' || src.language.length > 40)) return null
+  return comboOf({ niche: src.niche, platform: src.platform, language: src.language })
+}
+
 app.get('/api/admin/briefs', requireAdmin, async (req, res) => {
-  if (!validNiche(req.query.niche)) return res.status(400).json({ error: 'niche is required' })
-  res.json(await listBriefs(req.query.niche))
+  const combo = readCombo(req.query)
+  if (!combo) return res.status(400).json({ error: 'niche is required' })
+  res.json(await listBriefs(combo))
 })
 
 app.post('/api/admin/niches', requireAdmin, async (req, res) => {
-  if (!validNiche(req.body?.niche)) return res.status(400).json({ error: 'Enter a niche (up to 200 characters).' })
-  await trackNiche(req.body.niche)
+  const combo = readCombo(req.body)
+  if (!combo) return res.status(400).json({ error: 'Enter a niche (up to 200 characters).' })
+  await trackCombo(combo)
   res.json({ ok: true })
 })
 
-// Research runs take a minute or two: start them and let the page poll the overview.
+// "Refresh now": research takes a minute or two, so start it and let the page poll the overview.
 app.post('/api/admin/briefs/run', requireAdmin, (req, res) => {
-  if (!validNiche(req.body?.niche)) return res.status(400).json({ error: 'Enter a niche (up to 200 characters).' })
-  trackNiche(req.body.niche)
-    .then(() => runBrief(req.body.niche, { trigger: 'manual' }))
+  const combo = readCombo(req.body)
+  if (!combo) return res.status(400).json({ error: 'Enter a niche (up to 200 characters).' })
+  trackCombo(combo)
+    .then(() => runBrief(combo, { trigger: 'manual' }))
     .catch((err) => console.error('Manual brief failed:', friendlyError(err)))
   res.status(202).json({ started: true })
 })

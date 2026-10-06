@@ -73,7 +73,7 @@ ${COMMON_RULES}`,
   buildUserMessage({ ideas, ...ctx }) {
     return `${buildBriefing(ctx)}
 
-${briefForPrompt(ctx.marketBrief)}
+${briefForPrompt(ctx.marketBrief, { forIdeas: true })}
 
 ## Trend Agent ideas (0-based)
 ${JSON.stringify(ideas, null, 2)}
@@ -176,7 +176,7 @@ ${COMMON_RULES}`,
   buildUserMessage({ plan, window, ...ctx }) {
     return `${buildBriefing(ctx)}
 
-${briefForPrompt(ctx.marketBrief)}
+${briefForPrompt(ctx.marketBrief, { forIdeas: true })}
 
 ## The client's content plan
 Campaign: ${plan.name}

@@ -4,9 +4,9 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "concurrently -k -n web,api -c blue,magenta \"vite\" \"node --watch server/index.js\"",
+    "dev": "concurrently -k -n web,api -c blue,magenta \"vite\" \"npm:dev:api\"",
     "dev:web": "vite",
-    "dev:api": "node --watch server/index.js",
+    "dev:api": "node --watch-path=server --watch-path=src/agents server/index.js",
     "build": "vite build",
     "start": "node server/index.js",
     "preview": "vite preview"

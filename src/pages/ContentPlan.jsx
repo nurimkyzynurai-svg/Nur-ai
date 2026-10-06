@@ -4,7 +4,8 @@ import DashboardHeader from '../components/DashboardHeader.jsx'
 import { Card, CopyButton, inputClass } from '../components/ui.jsx'
 import { EMPTY_BRAND, ProfileSummary, VoiceSetup } from '../components/VoiceSetup.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
-import { GOALS, LANGUAGES } from '../agents/shared.js'
+import { ANY_PLATFORM, GOALS, LANGUAGES, TARGET_PLATFORMS } from '../agents/shared.js'
+import MarketFitBlock from '../components/MarketFit.jsx'
 import { estimateImproveCost, estimatePlanDayCost } from '../agents/costs.js'
 import { brandKey, load, plansKey, removeCalendarPosts, save, upsertCalendarPosts } from '../lib/storage.js'
 import { postStream } from '../lib/stream.js'
@@ -243,12 +244,18 @@ function DayResult({ date, piece, error, onRegenerate, busy }) {
         <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${piece.needsReview ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}`}>
           {piece.needsReview ? `Needs review · ${piece.quality.overall_score}/10` : `${piece.quality.overall_score}/10`}
         </span>
+        {piece.marketFit?.available && (
+          <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${piece.marketFit.marketRisk ? 'bg-amber-100 text-amber-800' : 'bg-ink-soft text-ink'}`}>
+            {piece.marketFit.marketRisk ? `Market risk · ${piece.marketFit.score}/10` : `Market fit ${piece.marketFit.score}/10`}
+          </span>
+        )}
         <button onClick={() => setOpen(!open)} className="text-xs font-medium text-indigo-600">
           {open ? 'Hide' : 'Open'}
         </button>
       </div>
       {open && (
         <div className="mt-3 space-y-4 text-sm">
+          {'marketFit' in piece && <MarketFitBlock fit={piece.marketFit} brief={piece.marketBrief} compact />}
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Hooks</p>
             <ol className="mt-1 space-y-1">
@@ -332,6 +339,7 @@ export default function ContentPlan() {
   const [goal, setGoal] = useState(brandSaved?.goal || 'business')
   const [language, setLanguage] = useState(brandSaved?.language && LANGUAGES.includes(brandSaved.language) ? brandSaved.language : 'English')
   const [customLanguage, setCustomLanguage] = useState('')
+  const [platform, setPlatform] = useState(brandSaved?.planPlatform || ANY_PLATFORM)
   const [brand, setBrand] = useState(brandSaved?.inputs || EMPTY_BRAND)
   const [profile, setProfile] = useState(brandSaved?.profile || null)
   const [pasteOpen, setPasteOpen] = useState(false)
@@ -345,8 +353,8 @@ export default function ContentPlan() {
   useEffect(() => save(plansKey(user.email), store), [store, user.email])
   useEffect(() => {
     const prev = load(brandKey(user.email), {})
-    save(brandKey(user.email), { ...prev, niche, goal, inputs: brand, profile })
-  }, [user.email, niche, goal, brand, profile])
+    save(brandKey(user.email), { ...prev, niche, goal, planPlatform: platform, inputs: brand, profile })
+  }, [user.email, niche, goal, platform, brand, profile])
   useEffect(() => () => abortRef.current?.abort(), [])
 
   const update = (patch) =>
@@ -382,6 +390,7 @@ export default function ContentPlan() {
     niche,
     goal,
     language: lang,
+    platform,
     brandProfile: profile,
     brandInputs: profile ? undefined : brand,
     plan: { name: plan.name, campaignGoal: plan.campaignGoal, startDate: plan.startDate, keyDate: plan.keyDate, keyDateLabel: plan.keyDateLabel, vision: plan.vision, notes: plan.notes, days },
@@ -441,6 +450,8 @@ export default function ContentPlan() {
       caption: piece.captions[0] ? `${piece.captions[0].caption}\n\n${piece.captions[0].hashtags.join(' ')}` : '',
       score: piece.quality.overall_score,
       needsReview: piece.needsReview,
+      marketFitScore: piece.marketFit?.available ? piece.marketFit.score : null,
+      marketRisk: Boolean(piece.marketFit?.marketRisk),
     }
   }
 
@@ -692,6 +703,15 @@ export default function ContentPlan() {
                     ))}
                   </div>
                 </fieldset>
+                <label>
+                  <span className="text-sm font-medium text-slate-700">Default platform</span>
+                  <select value={platform} onChange={(e) => setPlatform(e.target.value)} className={`mt-1 ${inputClass}`}>
+                    {[ANY_PLATFORM, ...TARGET_PLATFORMS].map((p) => (
+                      <option key={p}>{p}</option>
+                    ))}
+                  </select>
+                  <span className="mt-1 block text-[11px] text-slate-400">Used for days that don’t name a platform, and for market research.</span>
+                </label>
                 <label>
                   <span className="text-sm font-medium text-slate-700">Content language</span>
                   <select value={language} onChange={(e) => setLanguage(e.target.value)} className={`mt-1 ${inputClass}`}>

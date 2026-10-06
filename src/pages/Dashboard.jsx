@@ -27,6 +27,7 @@ function PlanPostDetails({ post }) {
       <p className="text-xs text-indigo-600">
         📋 {post.campaign}
         {post.needsReview ? <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 font-semibold text-amber-800">Needs review</span> : null}
+        {post.marketRisk ? <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 font-semibold text-amber-800">Market risk</span> : null}
         <button onClick={() => setOpen(!open)} className="ml-2 font-medium underline">
           {open ? 'Hide' : 'Script & caption'}
         </button>
