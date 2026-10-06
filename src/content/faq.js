@@ -31,7 +31,7 @@ export const FAQ = [
   },
   {
     q: 'What happens to my data?',
-    a: 'Your account (name, email and a securely hashed password) and how many generations you’ve used are stored on the Viply server. Your Brand DNA, plans and generated content are stored in your own browser on this device. To create content, your inputs are sent to the Viply server and to Anthropic’s Claude API, which writes the text. Market research briefs contain only public web information about a niche and are shared between clients with the same niche, platform and language — your own posts, plans and scripts are never shared with other clients. Messages you send through the feedback form are stored on the Viply server.',
+    a: 'Your account (name, email and a securely hashed password) and how many generations you’ve used are stored on the Viply server. Your Brand DNA, plans and generated content are stored in your own browser on this device. To create content, your inputs are sent to the Viply server and to Anthropic’s Claude API, which writes the text. Market research briefs contain only public web information about a niche and are shared between clients with the same niche, platform and language — your own posts, plans and scripts are never shared with other clients. Messages you send through the feedback form are stored on the Viply server. Voice input is turned into text by your browser — Chrome uses Google’s speech service and Safari may use Apple’s — and Viply only ever receives the text, never audio.',
   },
   {
     q: 'Can I trust the trends and numbers it gives me?',

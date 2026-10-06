@@ -45,6 +45,15 @@ The backend (`server/`) is the only place the Anthropic API key is read. It come
 - **Admin:** Market Intel → **Feedback** lists messages newest first, with an Open/All filter and a **Done** checkbox.
 - **Contact email:** set `VITE_CONTACT_EMAIL` to show it in the landing footer. Without it, only the form is shown. Behind a hosting proxy, set `TRUST_PROXY=true` so the rate limit sees real visitor IPs.
 
+## Voice input
+
+- Every large text field has a **Dictate** button: Brand DNA inputs, the niche, campaign goal, vision, notes, plan days, the paste-a-plan box, proposal edits and the feedback form. The code is in `src/components/VoiceInput.jsx` and `src/lib/speech.js`.
+- It uses the browser's Web Speech API. Text appears live and is **appended** to what's already there, and you can edit it afterwards. Click **Stop** to finish. A pulsing gold dot shows recording, and only one field records at a time.
+- The recognition language follows the selected content language. A small dropdown overrides it, and the choice is remembered.
+- Browsers without speech support (e.g. Firefox) see the hint "Voice input works in Chrome, Edge and Safari." A blocked microphone shows how to allow it.
+- Viply never receives audio, only text. Note that the browser itself may use its maker's speech service (Chrome: Google, Safari: Apple).
+- `values.js` tells every agent that input may be dictated: read for meaning, don't copy recognition errors, and never treat filler words as brand style.
+
 ## Content Plan rules enforced in code (`server/plan.js`)
 
 - Plans have at most 31 days and one item per date. The improved plan stays within the start date to the key date plus 14 days.

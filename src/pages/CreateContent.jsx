@@ -3,6 +3,7 @@ import DashboardHeader from '../components/DashboardHeader.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { GOALS, LANGUAGES, TARGET_PLATFORMS } from '../agents/shared.js'
 import MarketFitBlock from '../components/MarketFit.jsx'
+import VoiceInput from '../components/VoiceInput.jsx'
 import { LimitReached, UsagePill } from '../components/EarlyAccess.jsx'
 import { Card, CopyButton } from '../components/ui.jsx'
 import { EMPTY_BRAND, ProfileSummary, VoiceSetup } from '../components/VoiceSetup.jsx'
@@ -317,6 +318,7 @@ export default function CreateContent() {
   const [goal, setGoal] = useState(saved?.goal || 'blogger')
   const [language, setLanguage] = useState(saved?.language || 'English')
   const [customLanguage, setCustomLanguage] = useState('')
+  const contentLanguage = language === 'Other' ? customLanguage : language
   const [platform, setPlatform] = useState(TARGET_PLATFORMS.includes(saved?.platform) ? saved.platform : TARGET_PLATFORMS[0])
   const [brand, setBrand] = useState(saved?.inputs || EMPTY_BRAND)
   const [profile, setProfile] = useState(saved?.profile || null)
@@ -401,16 +403,20 @@ export default function CreateContent() {
           <form onSubmit={generate} className="space-y-6">
             <Card title="1. What are we making?">
               <div className="space-y-5">
-                <label className="block">
-                  <span className="text-sm font-medium text-slate-700">Niche</span>
-                  <input
-                    value={niche}
-                    onChange={(e) => setNiche(e.target.value)}
-                    maxLength={200}
-                    placeholder="Your niche or industry — who you serve and what you offer"
-                    className="mt-1 w-full rounded-lg border border-slate-300 px-3.5 py-2.5 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
-                  />
-                </label>
+                <div>
+                  <label className="block">
+                    <span className="text-sm font-medium text-slate-700">Niche</span>
+                    <textarea
+                      rows={2}
+                      value={niche}
+                      onChange={(e) => setNiche(e.target.value)}
+                      maxLength={200}
+                      placeholder="Your niche or industry — who you serve and what you offer"
+                      className="mt-1 w-full rounded-lg border border-slate-300 px-3.5 py-2.5 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                    />
+                  </label>
+                  <VoiceInput value={niche} onChange={setNiche} language={contentLanguage} maxLength={200} />
+                </div>
                 <fieldset>
                   <legend className="text-sm font-medium text-slate-700">Goal</legend>
                   <div className="mt-1 grid gap-2 sm:grid-cols-2">
@@ -483,7 +489,7 @@ export default function CreateContent() {
                   <p className="mb-4 text-sm text-slate-500">
                     Voice Setup: the Brand DNA Agent learns your style from these. You only do this once.
                   </p>
-                  <VoiceSetup brand={brand} setBrand={updateBrand} />
+                  <VoiceSetup brand={brand} setBrand={updateBrand} language={contentLanguage} />
                 </>
               )}
             </Card>

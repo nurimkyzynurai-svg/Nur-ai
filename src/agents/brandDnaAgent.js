@@ -22,6 +22,7 @@ enough that a stranger could write in this client's voice after reading it.
 - Style: sentence length, use of emoji, slang, humor, storytelling vs. lists, formality, how posts open and close.
 - Audience: who they are, what they want, what they fear, what they already know.
 - Favorite phrases: exact recurring words or expressions from the posts and answers. Quote them; do not invent new ones.
+  Answers may be dictated by voice: never list filler words, speech habits or recognition errors as favorite phrases.
 - Never do: hard rules taken from the client's answers, plus anything clearly absent or contrary to the posts' voice. Phrase each as a short, testable rule.
 - Content pillars: 3–5 recurring themes this client should keep returning to.
 - If there are no example posts, build the profile from the answers and the niche, and set "confidence" to "low".

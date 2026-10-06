@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import VoiceInput from './VoiceInput.jsx'
 
 export const FEEDBACK_TYPES = [
   ['idea', 'Idea'],
@@ -97,6 +98,7 @@ export default function FeedbackForm({ source, defaultEmail = '', defaultType = 
           {message.length}/{MAX_MESSAGE}
         </span>
       </label>
+      <VoiceInput value={message} onChange={setMessage} language={typeof navigator !== 'undefined' ? navigator.language : 'English'} maxLength={MAX_MESSAGE} className="-mt-3" />
       <label className="block">
         <span className="text-sm font-medium text-slate-700">
           Email <span className="font-normal text-slate-400">(optional — only if you want a reply)</span>

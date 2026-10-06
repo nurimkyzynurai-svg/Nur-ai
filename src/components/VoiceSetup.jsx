@@ -1,3 +1,5 @@
+import VoiceInput from './VoiceInput.jsx'
+
 // Voice Setup (Brand DNA inputs) and the saved profile summary. Used by Create Content and Content Plan.
 
 export const QUESTIONS = [
@@ -10,7 +12,7 @@ export const QUESTIONS = [
 
 export const EMPTY_BRAND = { examplePosts: ['', '', ''], answers: { tone: '', style: '', audience: '', phrases: '', neverDo: '' } }
 
-export function VoiceSetup({ brand, setBrand }) {
+export function VoiceSetup({ brand, setBrand, language }) {
   const setPost = (i, v) => setBrand({ ...brand, examplePosts: brand.examplePosts.map((p, j) => (j === i ? v : p)) })
   const setAnswer = (k, v) => setBrand({ ...brand, answers: { ...brand.answers, [k]: v } })
   const input = 'w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20'
@@ -22,7 +24,10 @@ export function VoiceSetup({ brand, setBrand }) {
         <p className="text-xs text-slate-500">Paste the text or script of posts that performed well and sound like you.</p>
         <div className="mt-2 space-y-2">
           {brand.examplePosts.map((post, i) => (
-            <textarea key={i} rows={3} value={post} onChange={(e) => setPost(i, e.target.value)} placeholder={`Post ${i + 1}`} className={input} />
+            <div key={i}>
+              <textarea rows={3} value={post} onChange={(e) => setPost(i, e.target.value)} placeholder={`Post ${i + 1}`} aria-label={`Post ${i + 1}`} className={input} />
+              <VoiceInput value={post} onChange={(v) => setPost(i, v)} language={language} />
+            </div>
           ))}
         </div>
         {brand.examplePosts.length < 5 && (
@@ -33,10 +38,13 @@ export function VoiceSetup({ brand, setBrand }) {
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         {QUESTIONS.map(([key, label, hint], i) => (
-          <label key={key} className={key === 'neverDo' ? 'sm:col-span-2' : ''}>
-            <span className="text-sm font-medium text-slate-700">{i + 1}. {label}</span>
-            <input value={brand.answers[key]} onChange={(e) => setAnswer(key, e.target.value)} placeholder={hint} className={`mt-1 ${input}`} />
-          </label>
+          <div key={key} className={key === 'neverDo' ? 'sm:col-span-2' : ''}>
+            <label>
+              <span className="text-sm font-medium text-slate-700">{i + 1}. {label}</span>
+              <textarea rows={2} value={brand.answers[key]} onChange={(e) => setAnswer(key, e.target.value)} placeholder={hint} className={`mt-1 ${input}`} />
+            </label>
+            <VoiceInput value={brand.answers[key]} onChange={(v) => setAnswer(key, v)} language={language} />
+          </div>
         ))}
       </div>
     </div>

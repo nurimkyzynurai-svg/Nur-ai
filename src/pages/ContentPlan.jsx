@@ -6,6 +6,7 @@ import { EMPTY_BRAND, ProfileSummary, VoiceSetup } from '../components/VoiceSetu
 import { useAuth } from '../context/AuthContext.jsx'
 import { ANY_PLATFORM, GOALS, LANGUAGES, TARGET_PLATFORMS } from '../agents/shared.js'
 import MarketFitBlock from '../components/MarketFit.jsx'
+import VoiceInput from '../components/VoiceInput.jsx'
 import { LimitReached, UsagePill } from '../components/EarlyAccess.jsx'
 import { estimateImproveCost, estimatePlanDayCost } from '../agents/costs.js'
 import { brandKey, load, plansKey, removeCalendarPosts, save, upsertCalendarPosts } from '../lib/storage.js'
@@ -86,7 +87,7 @@ export function parsePastedPlan(textValue, startDate) {
   return out.sort((a, b) => a.date.localeCompare(b.date))
 }
 
-function DayEditor({ day, onChange, onRemove }) {
+function DayEditor({ day, onChange, onRemove, language }) {
   return (
     <div className="grid gap-2 rounded-xl border border-slate-200 p-3 md:grid-cols-[150px_1fr]">
       <div className="space-y-2">
@@ -109,6 +110,7 @@ function DayEditor({ day, onChange, onRemove }) {
           className={`${inputClass} flex-1`}
           aria-label="Content"
         />
+        <VoiceInput value={day.content} onChange={(v) => onChange({ content: v })} language={language} maxLength={2000} className="-mt-1" />
         <div className="flex items-center justify-between">
           <label className="flex items-center gap-2 text-xs text-slate-600" title="Improve it mode will not change this day">
             <input type="checkbox" checked={day.locked} onChange={(e) => onChange({ locked: e.target.checked })} />
@@ -123,7 +125,7 @@ function DayEditor({ day, onChange, onRemove }) {
   )
 }
 
-function Proposal({ plan, update, original }) {
+function Proposal({ plan, update, original, language }) {
   const proposal = plan.proposal
   const setDay = (date, patch) => update({ proposal: { ...proposal, days: proposal.days.map((d) => (d.date === date ? { ...d, ...patch } : d)) } })
   const revert = (d) => {
@@ -194,6 +196,7 @@ function Proposal({ plan, update, original }) {
               onChange={(e) => setDay(d.date, { content: e.target.value })}
               className={`${inputClass} mt-2 disabled:bg-slate-50 disabled:text-slate-500`}
             />
+            {!d.locked && <VoiceInput value={d.content} onChange={(v) => setDay(d.date, { content: v })} language={language} maxLength={2000} />}
             {d.reason && <p className="mt-1 text-xs text-slate-500">Why: {d.reason}</p>}
           </li>
         ))}
@@ -618,6 +621,7 @@ export default function ContentPlan() {
                     placeholder="Or describe any goal in your own words"
                     className={`mt-2 ${inputClass}`}
                   />
+                  <VoiceInput value={plan.campaignGoal} onChange={(v) => update({ campaignGoal: v })} language={lang} maxLength={300} />
                 </div>
                 <label>
                   <span className="text-sm font-medium text-slate-700">Start date</span>
@@ -637,28 +641,34 @@ export default function ContentPlan() {
                     className={`mt-1 ${inputClass}`}
                   />
                 </label>
-                <label className="sm:col-span-2">
-                  <span className="text-sm font-medium text-slate-700">Your vision</span>
-                  <textarea
-                    rows={3}
-                    value={plan.vision}
-                    onChange={(e) => update({ vision: e.target.value })}
-                    maxLength={4000}
-                    placeholder="The feeling, look and message you want. What must people think, feel and do?"
-                    className={`mt-1 ${inputClass}`}
-                  />
-                </label>
-                <label className="sm:col-span-2">
-                  <span className="text-sm font-medium text-slate-700">Notes</span>
-                  <textarea
-                    rows={2}
-                    value={plan.notes}
-                    onChange={(e) => update({ notes: e.target.value })}
-                    maxLength={4000}
-                    placeholder="Facts the agents must use: offer details, prices, names, links, what to avoid…"
-                    className={`mt-1 ${inputClass}`}
-                  />
-                </label>
+                <div className="sm:col-span-2">
+                  <label className="block">
+                    <span className="text-sm font-medium text-slate-700">Your vision</span>
+                    <textarea
+                      rows={3}
+                      value={plan.vision}
+                      onChange={(e) => update({ vision: e.target.value })}
+                      maxLength={4000}
+                      placeholder="The feeling, look and message you want. What must people think, feel and do?"
+                      className={`mt-1 ${inputClass}`}
+                    />
+                  </label>
+                  <VoiceInput value={plan.vision} onChange={(v) => update({ vision: v })} language={lang} maxLength={4000} />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block">
+                    <span className="text-sm font-medium text-slate-700">Notes</span>
+                    <textarea
+                      rows={2}
+                      value={plan.notes}
+                      onChange={(e) => update({ notes: e.target.value })}
+                      maxLength={4000}
+                      placeholder="Facts the agents must use: offer details, prices, names, links, what to avoid…"
+                      className={`mt-1 ${inputClass}`}
+                    />
+                  </label>
+                  <VoiceInput value={plan.notes} onChange={(v) => update({ notes: v })} language={lang} maxLength={4000} />
+                </div>
               </div>
             </Card>
 
@@ -680,6 +690,7 @@ export default function ContentPlan() {
                   <p className="text-xs text-slate-600">
                     One day per line. Start a line with a date (2026-03-01, 01.03, 1/3) or “Day 3” — lines without a date go on the next day. This replaces the days below.
                   </p>
+                  <VoiceInput value={pasteText} onChange={setPasteText} language={lang} className="-mb-1" />
                   <textarea rows={6} value={pasteText} onChange={(e) => setPasteText(e.target.value)} className={`mt-2 ${inputClass}`} placeholder={'Day 1: …\nDay 2: …\nDay 3: …'} />
                   <button type="button" onClick={applyPaste} className="mt-2 rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-indigo-700">
                     Import days
@@ -688,7 +699,7 @@ export default function ContentPlan() {
               )}
               <div className="space-y-3">
                 {plan.days.map((d) => (
-                  <DayEditor key={d.id} day={d} onChange={(patch) => setDay(d.id, patch)} onRemove={() => update({ days: plan.days.filter((x) => x.id !== d.id), proposal: null, approvedDays: null })} />
+                  <DayEditor key={d.id} day={d} language={lang} onChange={(patch) => setDay(d.id, patch)} onRemove={() => update({ days: plan.days.filter((x) => x.id !== d.id), proposal: null, approvedDays: null })} />
                 ))}
               </div>
               <button type="button" onClick={addDay} className="mt-3 text-sm font-medium text-indigo-600 hover:text-indigo-700">
@@ -745,13 +756,13 @@ export default function ContentPlan() {
                 ) : (
                   <>
                     <p className="mb-3 text-sm text-slate-500">Voice Setup — the Brand DNA Agent learns your style from these. You only do this once.</p>
-                    <VoiceSetup brand={brand} setBrand={setBrand} />
+                    <VoiceSetup brand={brand} setBrand={setBrand} language={lang} />
                   </>
                 )}
               </div>
             </Card>
 
-            {plan.mode === 'improve' && plan.proposal && !plan.approvedDays && <Proposal plan={plan} update={update} original={plan.days} />}
+            {plan.mode === 'improve' && plan.proposal && !plan.approvedDays && <Proposal plan={plan} update={update} original={plan.days} language={lang} />}
           </div>
 
           <aside className="space-y-6 lg:sticky lg:top-6 lg:self-start">
