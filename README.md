@@ -36,6 +36,15 @@ On every draft, `server/checks.js` also checks in code for banned clichés, a mi
 
 The backend (`server/`) is the only place the Anthropic API key is read. It comes from `.env`, which is git-ignored. The browser only calls `/api/generate`.
 
+## Customer communication
+
+- **FAQ** on the landing page (`#faq`). All questions and answers are in `src/content/faq.js`; edit that file to change them.
+- **Feedback:** a "Suggest an idea / Report a problem" button on every dashboard page, plus a contact form in the landing footer. Messages go to `POST /api/feedback` and are saved in `data/feedback.json`.
+  - All storage is in `server/feedback.js`, so moving to Supabase means rewriting only that file.
+  - Spam protection: 5 messages per 10 minutes per IP (`server/rateLimit.js`), a hidden honeypot field and length limits. IP addresses are not stored.
+- **Admin:** Market Intel → **Feedback** lists messages newest first, with an Open/All filter and a **Done** checkbox.
+- **Contact email:** set `VITE_CONTACT_EMAIL` to show it in the landing footer. Without it, only the form is shown. Behind a hosting proxy, set `TRUST_PROXY=true` so the rate limit sees real visitor IPs.
+
 ## Content Plan rules enforced in code (`server/plan.js`)
 
 - Plans have at most 31 days and one item per date. The improved plan stays within the start date to the key date plus 14 days.

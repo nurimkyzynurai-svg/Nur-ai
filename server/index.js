@@ -6,10 +6,14 @@ import { ANY_PLATFORM, GOALS, TARGET_PLATFORMS } from '../src/agents/index.js'
 import { runDirector } from './director.js'
 import { cleanPlan, runPlanGenerate, runPlanImprove } from './plan.js'
 import crypto from 'node:crypto'
+import { createFeedback, listFeedback, setFeedbackDone, validateFeedback } from './feedback.js'
+import { rateLimit } from './rateLimit.js'
 import { friendlyError, MOCK } from './claude.js'
 import { comboOf, listBriefs, overview, runBrief, runFounderReport, startScheduler, trackCombo } from './marketIntel.js'
 
 const app = express()
+// Behind a reverse proxy (hosting platform), set TRUST_PROXY=true so rate limits see the real client IP.
+app.set('trust proxy', process.env.TRUST_PROXY === 'true')
 app.use(express.json({ limit: '200kb' }))
 
 app.get('/api/health', (_req, res) => {
@@ -141,6 +145,28 @@ app.post('/api/admin/briefs/run', requireAdmin, (req, res) => {
 app.post('/api/admin/founder-report/run', requireAdmin, (_req, res) => {
   runFounderReport({ trigger: 'manual' }).catch((err) => console.error('Manual founder report failed:', friendlyError(err)))
   res.status(202).json({ started: true })
+})
+
+// ---------- Feedback ("Suggest an idea / Report a problem", landing contact form) ----------
+// Spam protection: per-IP rate limit, a hidden "website" field bots fill in, and strict length limits.
+const feedbackLimiter = rateLimit({ windowMs: 10 * 60 * 1000, max: 5, message: 'Too many messages from your network. Please try again in a few minutes.' })
+
+app.post('/api/feedback', feedbackLimiter, async (req, res) => {
+  if (req.body?.website) return res.status(201).json({ ok: true }) // honeypot: pretend success, store nothing
+  const { value, error } = validateFeedback(req.body)
+  if (error) return res.status(400).json({ error })
+  await createFeedback(value)
+  res.status(201).json({ ok: true })
+})
+
+app.get('/api/admin/feedback', requireAdmin, async (_req, res) => {
+  res.json(await listFeedback())
+})
+
+app.patch('/api/admin/feedback/:id', requireAdmin, async (req, res) => {
+  const updated = await setFeedbackDone(String(req.params.id), Boolean(req.body?.done))
+  if (!updated) return res.status(404).json({ error: 'Not found.' })
+  res.json(updated)
 })
 
 // In production (npm start) the server also serves the built React app.

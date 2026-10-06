@@ -220,6 +220,94 @@ function TokenGate({ onSave, error }) {
   )
 }
 
+const FEEDBACK_LABELS = { idea: 'Idea', problem: 'Problem', question: 'Question', partnership: 'Partnership' }
+const FEEDBACK_STYLE = {
+  idea: 'bg-gold-soft text-ink',
+  problem: 'bg-red-50 text-red-700',
+  question: 'bg-ink-soft text-ink',
+  partnership: 'bg-emerald-50 text-emerald-700',
+}
+
+function FeedbackPanel() {
+  const [items, setItems] = useState(null)
+  const [filter, setFilter] = useState('open')
+  const [error, setError] = useState('')
+
+  const load = useCallback(async () => {
+    try {
+      setItems(await api('/api/admin/feedback'))
+      setError('')
+    } catch (err) {
+      setError(err.message)
+    }
+  }, [])
+  useEffect(() => {
+    load()
+  }, [load])
+
+  async function toggle(item) {
+    setItems((list) => list.map((f) => (f.id === item.id ? { ...f, done: !f.done } : f)))
+    try {
+      await api(`/api/admin/feedback/${item.id}`, { method: 'PATCH', body: { done: !item.done } })
+    } catch (err) {
+      setError(err.message)
+      load()
+    }
+  }
+
+  if (!items) return <p className="text-sm text-slate-500">{error || 'Loading…'}</p>
+  const open = items.filter((f) => !f.done).length
+  const shown = filter === 'open' ? items.filter((f) => !f.done) : items
+  return (
+    <Card
+      title={`Feedback · ${open} open of ${items.length}`}
+      action={
+        <div className="flex items-center gap-2">
+          {['open', 'all'].map((id) => (
+            <button
+              key={id}
+              onClick={() => setFilter(id)}
+              className={`rounded-lg px-3 py-1.5 text-xs font-medium ${filter === id ? 'bg-ink text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+            >
+              {id === 'open' ? 'Open' : 'All'}
+            </button>
+          ))}
+          <button onClick={load} className="text-xs font-medium text-indigo-600">
+            Reload
+          </button>
+        </div>
+      }
+    >
+      {error && <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
+      {shown.length === 0 ? (
+        <p className="text-sm text-slate-500">{filter === 'open' ? 'Nothing open — all caught up.' : 'No messages yet.'}</p>
+      ) : (
+        <ul className="space-y-3">
+          {shown.map((f) => (
+            <li key={f.id} className={`rounded-xl border p-4 ${f.done ? 'border-slate-100 bg-slate-50 opacity-70' : 'border-slate-200 bg-white'}`}>
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                <span className={`rounded-full px-2 py-0.5 font-semibold ${FEEDBACK_STYLE[f.type] || 'bg-slate-100'}`}>{FEEDBACK_LABELS[f.type] || f.type}</span>
+                <span className="text-slate-500">{when(f.createdAt)}</span>
+                <span className="text-slate-400">· from {f.source}{f.page ? ` (${f.page})` : ''}</span>
+                <label className="ml-auto flex cursor-pointer items-center gap-1.5 font-medium text-slate-600">
+                  <input type="checkbox" checked={f.done} onChange={() => toggle(f)} />
+                  Done
+                </label>
+              </div>
+              <p className={`mt-2 whitespace-pre-line text-sm ${f.done ? 'text-slate-500 line-through' : 'text-slate-800'}`}>{f.message}</p>
+              {f.email && (
+                <a href={`mailto:${f.email}`} className="mt-2 inline-block text-xs font-medium text-indigo-600">
+                  Reply to {f.email}
+                </a>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </Card>
+  )
+}
+
 export default function MarketIntel() {
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
@@ -325,11 +413,12 @@ export default function MarketIntel() {
               ))}
             </div>
 
-            <div className="flex gap-1">
+            <div className="flex flex-wrap gap-1">
               {[
                 ['report', 'AI & Market Report'],
                 ['briefs', `Niche briefs (${data.briefs.length})`],
                 ['runs', 'Run log'],
+                ['feedback', 'Feedback'],
               ].map(([id, label]) => (
                 <button
                   key={id}
@@ -444,6 +533,8 @@ export default function MarketIntel() {
                 )}
               </Card>
             )}
+
+            {tab === 'feedback' && <FeedbackPanel />}
 
             {tab === 'runs' && (
               <Card title="Recent research runs">

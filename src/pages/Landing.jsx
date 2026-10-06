@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom'
 import Logo from '../components/Logo.jsx'
 import { AGENTS, PLANS } from '../data.js'
 import { useAuth } from '../context/AuthContext.jsx'
+import FeedbackForm from '../components/FeedbackForm.jsx'
+import { FAQ, FAQ_SUBTITLE, FAQ_TITLE } from '../content/faq.js'
 
 function Nav() {
   const { user } = useAuth()
@@ -11,6 +13,7 @@ function Nav() {
     ['#agents', 'AI Agents'],
     ['#how', 'How it works'],
     ['#pricing', 'Pricing'],
+    ['#faq', 'FAQ'],
   ]
 
   return (
@@ -244,12 +247,93 @@ function CTA() {
   )
 }
 
+function FaqItem({ item, index, open, onToggle }) {
+  const id = `faq-${index}`
+  return (
+    <li className="border-b border-ink/10 last:border-b-0">
+      <h3>
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={open}
+          aria-controls={`${id}-panel`}
+          id={`${id}-button`}
+          className="flex w-full items-center justify-between gap-4 rounded-lg py-5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-4"
+        >
+          <span className="text-base font-semibold text-ink sm:text-lg">{item.q}</span>
+          <span
+            aria-hidden="true"
+            className={`grid h-8 w-8 flex-none place-items-center rounded-full border text-lg transition ${
+              open ? 'rotate-45 border-gold bg-gold text-ink' : 'border-ink/20 text-ink'
+            }`}
+          >
+            +
+          </span>
+        </button>
+      </h3>
+      <div
+        id={`${id}-panel`}
+        role="region"
+        aria-labelledby={`${id}-button`}
+        className={`grid transition-all duration-200 ${open ? 'grid-rows-[1fr] pb-5' : 'grid-rows-[0fr]'}`}
+      >
+        <div className="overflow-hidden">
+          <p className="max-w-3xl leading-relaxed text-slate-600">{item.a}</p>
+        </div>
+      </div>
+    </li>
+  )
+}
+
+function Faq() {
+  const [open, setOpen] = useState(0)
+  return (
+    <section id="faq" className="bg-white py-24">
+      <div className="mx-auto max-w-4xl px-4 sm:px-6">
+        <div className="text-center">
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-gold">FAQ</p>
+          <h2 className="mt-3 font-display text-4xl font-semibold tracking-tight text-ink">{FAQ_TITLE}</h2>
+          <p className="mx-auto mt-4 max-w-2xl text-lg text-slate-600">{FAQ_SUBTITLE}</p>
+        </div>
+        <ul className="mt-12 rounded-3xl border border-ink/10 bg-white px-5 shadow-sm shadow-ink/5 sm:px-8">
+          {FAQ.map((item, i) => (
+            <FaqItem key={item.q} item={item} index={i} open={open === i} onToggle={() => setOpen(open === i ? -1 : i)} />
+          ))}
+        </ul>
+      </div>
+    </section>
+  )
+}
+
+// Shown only if VITE_CONTACT_EMAIL is set in .env; otherwise the contact block shows just the form.
+const CONTACT_EMAIL = (import.meta.env.VITE_CONTACT_EMAIL || '').trim()
+
 function Footer() {
   return (
-    <footer className="border-t border-slate-100">
-      <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 py-10 sm:flex-row sm:px-6">
-        <Logo />
-        <p className="text-sm text-slate-500">© {new Date().getFullYear()} Viply. All rights reserved.</p>
+    <footer id="contact" className="border-t border-ink/10 bg-ink-soft/50">
+      <div className="mx-auto grid max-w-7xl gap-10 px-4 py-16 sm:px-6 lg:grid-cols-[1fr_440px]">
+        <div>
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-gold">Contact</p>
+          <h2 className="mt-3 font-display text-3xl font-semibold text-ink">Partnerships and support</h2>
+          <p className="mt-3 max-w-md text-slate-600">
+            Questions, problems, partnership ideas or early-access requests — send us a message and a real person will read it.
+          </p>
+          {CONTACT_EMAIL && (
+            <p className="mt-6">
+              <span className="block text-xs font-semibold uppercase tracking-wide text-slate-500">Email</span>
+              <a href={`mailto:${CONTACT_EMAIL}`} className="mt-1 inline-block break-all font-display text-xl font-semibold text-ink underline decoration-gold decoration-2 underline-offset-4">
+                {CONTACT_EMAIL}
+              </a>
+            </p>
+          )}
+          <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-6">
+            <Logo />
+            <p className="text-sm text-slate-500">© {new Date().getFullYear()} Viply. All rights reserved.</p>
+          </div>
+        </div>
+        <div className="rounded-3xl border border-ink/10 bg-white p-6 shadow-sm shadow-ink/5">
+          <FeedbackForm source="landing" defaultType="question" />
+        </div>
       </div>
     </footer>
   )
@@ -265,6 +349,7 @@ export default function Landing() {
         <HowItWorks />
         <Pricing />
         <CTA />
+        <Faq />
       </main>
       <Footer />
     </>
