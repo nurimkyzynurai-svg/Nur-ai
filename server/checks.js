@@ -36,7 +36,7 @@ export function checkScript({ script, goal, previousFeedback = [] }) {
     const cta = script.beats.filter((b) => b.section === 'cta')
     const ctaText = normalize(cta.map((b) => `${b.voiceover} ${b.on_screen_text}`).join(' '))
     if (!cta.length) {
-      add('', 'There is no call-to-action beat.', 'End with a "cta" beat that says exactly what to write, e.g. «Напишите слово ТОН в директ».')
+      add('', 'There is no call-to-action beat.', 'End with a "cta" beat that says exactly what to write, e.g. «Напишите слово [КЛЮЧ] в директ».')
     } else if (!keyword) {
       add(cta[0].voiceover, 'The call to action has no keyword (cta_keyword is empty).', 'Tell viewers exactly what to write, with one keyword in capitals, and put it in cta_keyword.')
     } else if (!hasWord(ctaText, keyword)) {

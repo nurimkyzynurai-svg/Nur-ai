@@ -20,6 +20,8 @@ For the chosen content idea, write exactly 5 different hooks for the first 3 sec
 - Add a matching on-screen text line (even shorter) and one visual action for the first frame.
 - The hook must be paid off by the video — no clickbait the script can't deliver.
 - Blogger goal: aim for curiosity, emotion and comments. Business goal: call out the buyer's pain or desire.
+- If the idea contains a "creative_concept" from the Creative Director (and "director_notes"), the hooks must open THAT concept —
+  its angle, emotional core and visual signature.
 - Sound exactly like the client's Brand DNA. Never break a "never_do" rule.
 
 ## Output format
@@ -60,15 +62,16 @@ ${JSON.stringify(idea, null, 2)}
 Write 5 hooks for this idea and pick the best.`
   },
 
+  // Sample-mode data only (MOCK_AI). "{niche}" is replaced with the client's niche.
   exampleOutput: {
     hooks: [
-      { text: 'Stop doing crunches. Seriously.', on_screen_text: 'STOP doing crunches', visual: 'Creator mid-crunch, freezes and points at camera', technique: 'Stop doing X' },
-      { text: 'You don’t need a gym. Here’s proof.', on_screen_text: 'No gym needed', visual: 'Living room with just a towel', technique: 'Bold claim' },
-      { text: 'Busy mom? This one’s for you.', on_screen_text: 'Busy moms 👇', visual: 'Kids’ toys in the background', technique: 'Audience callout' },
-      { text: '15 minutes did more than my 1-hour gym days.', on_screen_text: '15 min > 1 hour?', visual: 'Timer starting at 15:00', technique: 'Surprising number' },
-      { text: 'The workout myth everyone still believes.', on_screen_text: 'Myth #1', visual: 'Big red X over a treadmill photo', technique: 'Curiosity gap' },
+      { text: '[Sample] Stop believing this about {niche}.', on_screen_text: 'STOP', visual: 'Direct look into camera', technique: 'Stop doing X' },
+      { text: '[Sample] Here is proof it works differently.', on_screen_text: 'Proof', visual: 'Show the result first', technique: 'Bold claim' },
+      { text: '[Sample] If you care about {niche}, watch this.', on_screen_text: 'For you 👇', visual: 'Point at camera', technique: 'Audience callout' },
+      { text: '[Sample] One change made the biggest difference.', on_screen_text: '1 change', visual: 'Hold up one finger', technique: 'Curiosity gap' },
+      { text: '[Sample] The mistake almost everyone makes.', on_screen_text: 'Mistake #1', visual: 'Big red X on screen', technique: 'Relatable pain' },
     ],
     best_hook_index: 0,
-    reasoning: 'A pattern interrupt plus a direct command creates instant tension the script resolves.',
+    reasoning: '[Sample] A direct command creates tension the script resolves.',
   },
 }

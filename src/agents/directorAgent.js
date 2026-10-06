@@ -71,12 +71,70 @@ ${JSON.stringify(captions, null, 2)}
 Combine this into the final package summary.`
   },
 
+  // Sample-mode data only (MOCK_AI). "{niche}" is replaced with the client's niche.
   exampleOutput: {
-    summary: 'A fast myth-busting video that challenges what your audience believes about home workouts and ends with a comment prompt.',
-    post_first_on: 'TikTok — myth-busting formats get the most comments there.',
-    best_time_to_post: '18:00–20:00 on a weekday, when busy viewers scroll after work.',
-    filming_checklist: ['Towel and mat in frame', 'Film at eye level near a window', 'High energy for the first 3 seconds'],
-    follow_up_ideas: ['Part 2: 3 more myths', 'Reply to the top comment with a demo'],
+    summary: '[Sample] A fast myth-busting video for {niche} that ends with a comment prompt.',
+    post_first_on: '[Sample] TikTok — placeholder reason.',
+    best_time_to_post: '[Sample] Evening on a weekday — placeholder.',
+    filming_checklist: ['[Sample] Good light', '[Sample] Eye-level camera', '[Sample] High energy in the first 3 seconds'],
+    follow_up_ideas: ['[Sample] Part 2', '[Sample] Reply to the top comment'],
     warning: '',
+  },
+}
+
+// The Director's judging step: picks the strongest of the Creative Director's 3 concepts.
+export const conceptPickAgent = {
+  id: 'directorPick',
+  name: 'Director Agent',
+  role: 'Creative director and team lead',
+  goal: 'Pick the strongest of the Creative Director’s 3 concepts for this client and goal.',
+  effort: 'medium',
+
+  systemPrompt: `You are the Director Agent of Viply — the team lead who makes the final creative call.
+The Creative Director proposed 3 concepts for one short-form video. Pick the one most likely to win for THIS client.
+
+## Judge each concept on
+1. Originality — would competitors in this niche think of it? Generic concepts lose.
+2. Emotional pull — will the audience feel something in the first seconds and stay to the end?
+3. Goal fit — does it serve the client's goal (views and engagement, or sales and leads)?
+4. Brand fit — does it match the Brand DNA exactly and break no "never_do" rule?
+5. Feasibility and honesty — can this client film it, and does it avoid inventing facts, offers or results?
+
+Be decisive: pick one. You may add up to 3 short "director_notes" that sharpen it (what to keep, what to push further).
+
+## Output format
+{
+  "chosen_index": number,          // 0-based
+  "scores": [ { "index": number, "originality": number, "emotion": number, "goal_fit": number, "brand_fit": number, "feasibility": number } ],
+  "reasoning": string,             // why this concept wins, in 2–3 sentences
+  "director_notes": string[]
+}
+${COMMON_RULES}`,
+
+  // Input: { brandProfile, goal, language, niche, concepts }
+  outputSchema: z.object({
+    chosen_index: z.number(),
+    scores: z.array(
+      z.object({ index: z.number(), originality: z.number(), emotion: z.number(), goal_fit: z.number(), brand_fit: z.number(), feasibility: z.number() }),
+    ),
+    reasoning: z.string(),
+    director_notes: z.array(z.string()),
+  }),
+
+  buildUserMessage({ concepts, ...ctx }) {
+    return `${buildBriefing(ctx)}
+
+## The Creative Director's 3 concepts (0-based)
+${JSON.stringify(concepts, null, 2)}
+
+Pick the strongest concept.`
+  },
+
+  // Sample-mode data only (MOCK_AI).
+  exampleOutput: {
+    chosen_index: 0,
+    scores: [0, 1, 2].map((index) => ({ index, originality: 8 - index, emotion: 8, goal_fit: 8, brand_fit: 9, feasibility: 8 })),
+    reasoning: '[Sample] Placeholder reasoning for the pick.',
+    director_notes: ['[Sample] Keep the opening visual.'],
   },
 }

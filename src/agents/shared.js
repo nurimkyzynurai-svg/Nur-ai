@@ -2,6 +2,8 @@
 // These files contain prompts and schemas only — no secrets. They are run by the
 // backend (server/), which is the only place the Anthropic API key is read.
 
+import { AGENT_VALUES } from './values.js'
+
 export const MODEL = 'claude-sonnet-5-5'
 
 export const GOALS = {
@@ -18,7 +20,7 @@ export const GOALS = {
     strategy:
       'Optimize for conversions. Lead with the customer’s pain or desire, show proof and the result the product delivers, ' +
       'handle one objection, and end with ONE call to action that says exactly what to write or do, including a keyword ' +
-      '(e.g. «Напишите слово ТОН в директ», "Comment GLOW and I’ll send you the price list"). ' +
+      '(pattern: «Напишите слово [КЛЮЧ] в директ» / "Comment [KEYWORD] and I’ll send you [the offer]", with a keyword that fits the offer). ' +
       'Still entertain first — value before the pitch, no hard-sell clichés.',
   },
 }
@@ -74,7 +76,8 @@ export const BRIEF_SECTIONS = [
 export const LANGUAGES = ['English', 'Russian', 'Kazakh', 'Spanish', 'Turkish', 'Uzbek', 'German', 'French', 'Portuguese', 'Arabic']
 
 // Rules appended to every agent's system prompt.
-export const COMMON_RULES = `
+export const COMMON_RULES = `${AGENT_VALUES}
+
 ## Rules that apply to every Viply agent
 1. BRAND DNA IS LAW. Every briefing contains the client's Brand DNA profile. Follow it strictly:
    - match the tone, style and sentence rhythm it describes;
@@ -87,7 +90,7 @@ export const COMMON_RULES = `
 4. Be original. Never copy existing creators' content; build on patterns, not on their words.
 5. Respond only with the JSON object described in your output format.`
 
-export function buildBriefing({ brandProfile, goal, language, niche }) {
+export function buildBriefing({ brandProfile, goal, language, niche, planDay }) {
   const g = GOALS[goal] || GOALS.blogger
   return `# Client briefing
 Niche: ${niche}
@@ -96,5 +99,28 @@ Goal: ${g.label} — success is measured in ${g.metrics}.
 Goal strategy: ${g.strategy}
 
 ## Brand DNA profile (follow strictly)
-${JSON.stringify(brandProfile, null, 2)}`
+${JSON.stringify(brandProfile, null, 2)}${planDay ? `\n\n${planSection(planDay)}` : ''}`
+}
+
+const daysBetween = (a, b) => Math.round((new Date(`${b}T00:00:00Z`) - new Date(`${a}T00:00:00Z`)) / 86400000)
+
+/** The client's content plan item. Used when a Content Plan day is being produced. */
+export function planSection({ campaign, day }) {
+  const diff = daysBetween(day.date, campaign.keyDate)
+  const timing = diff === 0 ? 'this IS the key date' : diff > 0 ? `${diff} day(s) before the key date` : `${-diff} day(s) after the key date`
+  return `## Content plan item from the client — RESPECT IT
+Campaign: ${campaign.name}
+Campaign goal: ${campaign.campaignGoal}
+Key date: ${campaign.keyDate}${campaign.keyDateLabel ? ` — ${campaign.keyDateLabel}` : ''}
+Client's vision: ${campaign.vision || '(none given)'}
+Client's notes: ${campaign.notes || '(none given)'}
+
+### Today's item — ${day.date} (${timing})${day.phase ? `, campaign phase: ${day.phase}` : ''}
+${day.content}${day.platform ? `\nPlatform: ${day.platform}` : ''}${day.format ? `\nFormat: ${day.format}` : ''}
+
+### Rules for plan items
+- This item IS the idea. Do not change its topic, message, angle, format, offer, call to action or facts.
+- Your job is execution only: make it an excellent piece of content exactly as described — wording, hook, pacing, shots, captions.
+- Fill gaps with execution details, never with new claims. Text in [square brackets] is a placeholder for the client — keep it.
+- If the item names a platform, format or call to action, use exactly that.`
 }

@@ -1,8 +1,10 @@
 import { z } from 'zod'
+import { AGENT_VALUES } from './values.js'
 
 // Shared pieces for agents that research the live web (Market Intelligence, Founder Report).
 
-export const RESEARCH_RULES = `
+export const RESEARCH_RULES = `${AGENT_VALUES}
+
 ## Research rules (non-negotiable)
 1. Use the web_search tool. Never rely only on your memory for anything that changes over time — trends, algorithm
    changes, product launches, prices. If you could not find a source, say so; do not fill the gap from memory.
@@ -14,7 +16,8 @@ export const RESEARCH_RULES = `
    and attribute it ("according to …").
 6. Stay within the search budget you are given. Plan your searches so each one covers a different topic.`
 
-export const STRUCTURE_RULES = `
+export const STRUCTURE_RULES = `${AGENT_VALUES}
+
 ## Structuring rules (non-negotiable)
 - You are given research notes and a numbered source list (S1, S2, …). Use ONLY what is in the notes.
   Do not add facts, examples or numbers from your own memory.

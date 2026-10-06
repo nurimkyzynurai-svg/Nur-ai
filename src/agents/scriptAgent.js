@@ -21,6 +21,10 @@ This is a rewrite. Every feedback item has an id (F1, F2, AUTO-1…).
 - Keep everything the feedback did not criticize, unless a fix requires changing it.
 - In "fixes", list one entry per feedback id: what you changed, quoting the new line. Do not list an id you did not fix.
 
+## Creative direction
+If the idea contains a "creative_concept" from the Creative Director (and "director_notes"), execute that concept boldly:
+its story beats, emotional core, format and visual signature are the creative direction. Do not water it down into a generic video.
+
 ## Structure
 1. Hook (0–3 s): the chosen hook, exactly.
 2. Re-hook / setup (3–8 s): raise the stakes or open a loop so viewers stay.
@@ -29,15 +33,16 @@ This is a rewrite. Every feedback item has an id (F1, F2, AUTO-1…).
 4. Payoff: deliver exactly what the hook promised.
 5. Call to action (one only):
    - Blogger goal: a follow / comment / save / share prompt that fits the voice.
-   - Business goal: say EXACTLY what to write or do, with a keyword in capital letters — for example
-     «Напишите слово ТОН в директ, и я пришлю подборку» or "Comment GLOW and I’ll DM you the price list".
+   - Business goal: say EXACTLY what to write or do, with one keyword in capital letters that fits the offer.
+     Pattern: «Напишите слово [КЛЮЧ] в директ, и я пришлю [что получит зритель]» / "Comment [KEYWORD] and I’ll DM you [what they get]".
      Put that keyword in "cta_keyword" and use the very same keyword in the cta beat. "Link in bio", "contact us" or
      "write to us" without a keyword are not allowed.
 
 ## Be specific, never vague
 - Replace every vague claim with something concrete the viewer can see, check or picture: a number the client actually gave, a
   before/after, a demonstration on camera, a named ingredient or step, a real customer situation.
-  Weak: «Наш крем делает кожу идеальной». Strong: «Нанесла утром — к обеду нет жирного блеска на лбу. Показываю».
+  Weak: "Our [product/service] gives amazing results." Strong: show the specific result the client described, on camera
+  or in a concrete scene: what it looked like before, what changed, and when — using only facts from the briefing.
 - No unprovable superlatives ("the best", «самый эффективный», «№1») unless the briefing gives the proof.
 - No invented statistics, studies, prices or medical/financial guarantees. A statistic may only appear if it is in the
   Market Brief, and then attributed ("according to …").
@@ -116,18 +121,19 @@ ${JSON.stringify(idea, null, 2)}
 ${JSON.stringify(hook, null, 2)}${revision}`
   },
 
+  // Sample-mode data only (MOCK_AI). "{niche}" is replaced with the client's niche.
   exampleOutput: {
-    title: '3 home workout myths keeping you stuck',
+    title: '[Sample] 3 myths about {niche}',
     duration_seconds: 40,
     beats: [
-      { section: 'hook', time: '0-3s', voiceover: 'Stop doing crunches. Seriously.', on_screen_text: 'STOP doing crunches', visual: 'Freeze mid-crunch, point at camera' },
-      { section: 'setup', time: '3-8s', voiceover: 'Three myths are wasting your 15 minutes. Number three hurt me the most.', on_screen_text: '3 myths', visual: 'Hold up three fingers' },
-      { section: 'body', time: '8-30s', voiceover: 'Myth one: more reps means more results. Watch my legs shake on rep five when I go slow.', on_screen_text: 'Myth 1: more reps', visual: 'Side-by-side fast vs slow squat' },
-      { section: 'payoff', time: '30-36s', voiceover: 'Fix these three and your 15 minutes finally count. Tiny wins.', on_screen_text: 'Tiny wins ✅', visual: 'Smile, towel over shoulder' },
-      { section: 'cta', time: '36-40s', voiceover: 'Want my 15-minute plan? Comment PLAN and I’ll send it to you.', on_screen_text: 'Comment PLAN 👇', visual: 'Point down to comments' },
+      { section: 'hook', time: '0-3s', voiceover: '[Sample] Stop believing this about {niche}.', on_screen_text: 'STOP', visual: 'Direct look into camera' },
+      { section: 'setup', time: '3-8s', voiceover: '[Sample] Three myths are costing you. Number three surprised me most.', on_screen_text: '3 myths', visual: 'Hold up three fingers' },
+      { section: 'body', time: '8-30s', voiceover: '[Sample] Myth one… here is what actually happens, shown on camera.', on_screen_text: 'Myth 1', visual: 'Show the real example' },
+      { section: 'payoff', time: '30-36s', voiceover: '[Sample] Fix these three and you will see the difference.', on_screen_text: 'Fixed ✅', visual: 'Smile, relaxed' },
+      { section: 'cta', time: '36-40s', voiceover: '[Sample] Want the full checklist? Comment GUIDE and I will send it.', on_screen_text: 'Comment GUIDE 👇', visual: 'Point down to comments' },
     ],
-    full_voiceover: 'Stop doing crunches. Seriously. Three myths are wasting your 15 minutes…',
-    cta_keyword: 'PLAN',
+    full_voiceover: '[Sample] Stop believing this about {niche}. Three myths are costing you…',
+    cta_keyword: 'GUIDE',
     fixes: [],
   },
 }

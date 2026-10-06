@@ -72,12 +72,13 @@ ${JSON.stringify(script, null, 2)}
 Write captions and hashtags for every platform.`
   },
 
+  // Sample-mode data only (MOCK_AI). "{niche}" is replaced with the client's niche.
   exampleOutput: {
     captions: PLATFORMS.map((platform) => ({
       platform,
-      caption: 'Myth #3 surprised me the most 👀 Which one did you believe?',
-      hashtags: ['#homeworkout', '#fitnessmyths', '#nogym'],
-      cta: 'Comment your myth',
+      caption: `[Sample ${platform} caption] Which of these surprised you about {niche}? 👀`,
+      hashtags: ['#sample', '#yourniche', '#example'],
+      cta: 'Comment your answer',
     })),
   },
 }

@@ -8,6 +8,7 @@ Viply is an AI content creation platform, built with React, React Router, Tailwi
 - **`/register`**: sign-up page with plan selection (it preselects the plan from `?plan=start|pro|multi`)
 - **`/login`**: log-in page
 - **`/dashboard`** (requires login): niche input, autopilot toggle, stats, and a monthly content calendar where you can add and delete posts for each day
+- **`/dashboard/plan`** (requires login): Content Plan. Enter a campaign (name, any goal, start date, key date, vision, notes) and what goes out each day, or paste a whole plan. Choose **Execute as is** (the agents only turn each day into a script, hooks and captions) or **Improve it** (the Creative Director proposes a stronger campaign arc, shows every change and why, and waits for your approval). Results go into the Overview calendar, one item per day.
 - **`/dashboard/create`** (requires login): Create Content page. Enter a niche, goal (Blogger or Business) and language, and fill in Voice Setup once. Then click Generate to watch each AI agent work live and get the final script, hooks, captions and quality score.
 
 ## AI agent team
@@ -18,6 +19,7 @@ Agent definitions live in `src/agents/`. Each file has a name, role, goal, syste
 |---|---|
 | Brand DNA Agent | Turns example posts and Voice Setup answers into a style profile |
 | Trend Agent | Suggests 10 trending ideas and picks the best one |
+| Creative Director Agent | Turns the trend ideas into 3 bold, original concepts. The Director picks the strongest. In Content Plan's Improve mode, it improves the whole campaign |
 | Hook Agent | Writes 5 hooks for the first 3 seconds |
 | Script Agent | Writes the full script. On a rewrite it fixes every feedback item and lists what it changed. It avoids banned clichés and vague claims. For Business it ends with an exact keyword CTA (e.g. «Напишите слово ТОН») |
 | Quality Agent | Scores virality and brand match from 1 to 10 and gives numbered feedback. Below 8, the script goes back to the Script Agent (4 drafts max). If no draft reaches 8, the best draft is shown labeled **Needs review** |
@@ -25,11 +27,20 @@ Agent definitions live in `src/agents/`. Each file has a name, role, goal, syste
 | Market Intelligence Agent | Researches the live web with Anthropic's web search tool and saves a cited **Market Brief** per niche (cached 24 h) |
 | Director Agent | Runs everything in order (`server/director.js`) and combines the final package |
 
+Every agent's system prompt includes Viply's values (`src/agents/values.js`): quality first, understand the client, be decisive, think like a top specialist for the niche, give every piece a purpose, respect the client's plan, and be honest.
+
 Every agent receives the Brand DNA profile, the goal and the content language (see `src/agents/shared.js`, which also holds the banned clichés list).
 
 On every draft, `server/checks.js` also checks in code for banned clichés, a missing or unused Business keyword, and feedback the rewrite did not address. Any of these keeps the draft below the pass score, even if the Quality Agent missed it.
 
 The backend (`server/`) is the only place the Anthropic API key is read. It comes from `.env`, which is git-ignored. The browser only calls `/api/generate`.
+
+## Content Plan rules enforced in code (`server/plan.js`)
+
+- Plans have at most 31 days and one item per date. The improved plan stays within the start date to the key date plus 14 days.
+- Days marked **Keep exactly as written** always come back unchanged, even if the model edits them.
+- Change labels (kept / improved / new / moved / removed) are recalculated from the real differences, not taken from the model.
+- In both modes, every day's briefing tells the agents the item *is* the idea: no changes to its topic, offer, facts or call to action. The Quality Agent checks this.
 
 ## Market Intel
 

@@ -1,12 +1,6 @@
-// List prices for the model Viply uses (claude-sonnet-5-5), in USD.
-// Update these if Anthropic changes pricing. Estimates only — your invoice is the source of truth.
-export const PRICES = {
-  inputPerMTok: 2,
-  outputPerMTok: 10,
-  cacheWritePerMTok: 2.5,
-  cacheReadPerMTok: 0.2,
-  webSearch: 10 / 1000, // $10 per 1,000 searches
-}
+import { PRICES } from '../src/agents/costs.js'
+
+export { PRICES }
 
 export function emptyUsage() {
   return { calls: 0, inputTokens: 0, outputTokens: 0, cacheWriteTokens: 0, cacheReadTokens: 0, webSearches: 0 }

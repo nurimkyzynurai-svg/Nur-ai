@@ -4,6 +4,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { GOALS, LANGUAGES } from '../src/agents/index.js'
 import { runDirector } from './director.js'
+import { cleanPlan, runPlanGenerate, runPlanImprove } from './plan.js'
 import crypto from 'node:crypto'
 import { friendlyError, MOCK } from './claude.js'
 import { listBriefs, overview, runBrief, runFounderReport, startScheduler, trackNiche } from './marketIntel.js'
@@ -15,43 +16,38 @@ app.get('/api/health', (_req, res) => {
   res.json({ ok: true, mock: MOCK, hasKey: Boolean(process.env.ANTHROPIC_API_KEY) })
 })
 
-// Streams progress as newline-delimited JSON so the dashboard can show each agent live.
-app.post('/api/generate', async (req, res) => {
-  const { niche, goal, language, brandProfile, brandInputs } = req.body || {}
-  if (typeof niche !== 'string' || !niche.trim() || niche.length > 200) {
-    return res.status(400).json({ error: 'Please enter your niche (up to 200 characters).' })
+// Reads the fields every content request shares. Returns an error message or the clean input.
+function readContentRequest(body = {}) {
+  const { niche, goal, language, brandProfile, brandInputs } = body
+  if (typeof niche !== 'string' || !niche.trim() || niche.length > 200) return { error: 'Please enter your niche (up to 200 characters).' }
+  if (!GOALS[goal]) return { error: 'Goal must be "blogger" or "business".' }
+  if (typeof language !== 'string' || !language.trim() || language.length > 40) return { error: 'Please choose a content language.' }
+  return {
+    input: {
+      niche: niche.trim(),
+      goal,
+      language: language.trim(),
+      brandProfile: brandProfile && typeof brandProfile === 'object' ? brandProfile : null,
+      brandInputs: {
+        examplePosts: Array.isArray(brandInputs?.examplePosts) ? brandInputs.examplePosts.slice(0, 5).map(String) : [],
+        answers: brandInputs?.answers && typeof brandInputs.answers === 'object' ? brandInputs.answers : {},
+      },
+    },
   }
-  if (!GOALS[goal]) return res.status(400).json({ error: 'Goal must be "blogger" or "business".' })
-  if (typeof language !== 'string' || !language.trim() || language.length > 40) {
-    return res.status(400).json({ error: 'Please choose a content language.' })
-  }
+}
 
+// Streams progress as newline-delimited JSON so the dashboard can show each agent live.
+async function streamJob(res, run) {
   res.setHeader('Content-Type', 'application/x-ndjson; charset=utf-8')
   res.setHeader('Cache-Control', 'no-cache')
   res.flushHeaders()
-
   const controller = new AbortController()
   res.on('close', () => controller.abort())
   const emit = (event) => {
     if (!res.writableEnded) res.write(JSON.stringify(event) + '\n')
   }
-
   try {
-    const result = await runDirector(
-      {
-        niche: niche.trim(),
-        goal,
-        language: language.trim(),
-        brandProfile: brandProfile && typeof brandProfile === 'object' ? brandProfile : null,
-        brandInputs: {
-          examplePosts: Array.isArray(brandInputs?.examplePosts) ? brandInputs.examplePosts.slice(0, 5).map(String) : [],
-          answers: brandInputs?.answers && typeof brandInputs.answers === 'object' ? brandInputs.answers : {},
-        },
-      },
-      emit,
-      { signal: controller.signal },
-    )
-    emit({ type: 'result', result })
+    emit({ type: 'result', result: await run(emit, controller.signal) })
   } catch (err) {
     if (!controller.signal.aborted) {
       console.error(err)
@@ -60,6 +56,37 @@ app.post('/api/generate', async (req, res) => {
   } finally {
     res.end()
   }
+}
+
+app.post('/api/generate', async (req, res) => {
+  const { input, error } = readContentRequest(req.body)
+  if (error) return res.status(400).json({ error })
+  await streamJob(res, (emit, signal) => runDirector(input, emit, { signal }))
+})
+
+// Content Plan: "Improve it" proposes changes; "generate" produces every day.
+app.post('/api/plan/improve', async (req, res) => {
+  const { input, error } = readContentRequest(req.body)
+  if (error) return res.status(400).json({ error })
+  let plan
+  try {
+    plan = cleanPlan(req.body.plan)
+  } catch (err) {
+    return res.status(400).json({ error: err.message })
+  }
+  await streamJob(res, (emit, signal) => runPlanImprove({ ...input, plan }, emit, { signal }))
+})
+
+app.post('/api/plan/generate', async (req, res) => {
+  const { input, error } = readContentRequest(req.body)
+  if (error) return res.status(400).json({ error })
+  let plan
+  try {
+    plan = cleanPlan(req.body.plan)
+  } catch (err) {
+    return res.status(400).json({ error: err.message })
+  }
+  await streamJob(res, (emit, signal) => runPlanGenerate({ ...input, plan }, emit, { signal }))
 })
 
 // ---------- Market Intel admin API (founder only) ----------

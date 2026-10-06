@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import DashboardHeader from '../components/DashboardHeader.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { AGENTS, PLANS } from '../data.js'
@@ -9,6 +10,37 @@ const PLATFORMS = {
   YouTube: 'bg-red-100 text-red-700',
   LinkedIn: 'bg-sky-100 text-sky-700',
   X: 'bg-slate-100 text-slate-700',
+}
+// Styles for every platform a post can have (Content Plan days can use more than autopilot).
+const PLATFORM_STYLE = {
+  ...PLATFORMS,
+  Threads: 'bg-slate-800 text-white',
+  Facebook: 'bg-blue-100 text-blue-700',
+  Telegram: 'bg-cyan-100 text-cyan-700',
+}
+const platformStyle = (p) => PLATFORM_STYLE[p] || 'bg-slate-100 text-slate-700'
+
+function PlanPostDetails({ post }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="mt-1">
+      <p className="text-xs text-indigo-600">
+        📋 {post.campaign}
+        {post.needsReview ? <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 font-semibold text-amber-800">Needs review</span> : null}
+        <button onClick={() => setOpen(!open)} className="ml-2 font-medium underline">
+          {open ? 'Hide' : 'Script & caption'}
+        </button>
+      </p>
+      {open && (
+        <div className="mt-2 space-y-2 rounded-lg bg-slate-50 p-2 text-xs text-slate-700">
+          {post.hook && <p><span className="font-semibold">Hook:</span> {post.hook}</p>}
+          <p className="whitespace-pre-line"><span className="font-semibold">Voiceover:</span> {post.voiceover}</p>
+          {post.caption && <p className="whitespace-pre-line"><span className="font-semibold">Caption:</span> {post.caption}</p>}
+          <Link to="/dashboard/plan" className="font-medium text-indigo-600">Open in Content Plan →</Link>
+        </div>
+      )}
+    </div>
+  )
 }
 
 const TEMPLATES = [
@@ -159,7 +191,7 @@ function Calendar({ posts, month, setMonth, selected, setSelected }) {
               </span>
               <div className="mt-1 space-y-1">
                 {dayPosts.slice(0, 2).map((p) => (
-                  <div key={p.id} className={`hidden truncate rounded px-1.5 py-0.5 text-[11px] font-medium sm:block ${PLATFORMS[p.platform]}`}>
+                  <div key={p.id} className={`hidden truncate rounded px-1.5 py-0.5 text-[11px] font-medium sm:block ${platformStyle(p.platform)}`}>
                     {p.time} {p.format}
                   </div>
                 ))}
@@ -202,13 +234,14 @@ function DayPanel({ dateKey, posts, onAdd, onDelete }) {
           <li key={p.id} className="group rounded-xl border border-slate-100 p-3">
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
-                <span className={`rounded px-2 py-0.5 text-xs font-medium ${PLATFORMS[p.platform]}`}>{p.platform}</span>
+                <span className={`rounded px-2 py-0.5 text-xs font-medium ${platformStyle(p.platform)}`}>{p.platform}</span>
                 <span className="text-xs text-slate-400">{p.time} · {p.format}</span>
               </div>
               <button onClick={() => onDelete(p.id)} className="text-xs text-slate-400 hover:text-red-600" aria-label="Delete post">✕</button>
             </div>
             <p className="mt-2 text-sm font-medium text-slate-800">{p.title}</p>
             {p.source === 'autopilot' && <p className="mt-1 text-xs text-indigo-600">⚡ Created by autopilot</p>}
+            {p.source === 'plan' && <PlanPostDetails post={p} />}
           </li>
         ))}
       </ul>
@@ -297,7 +330,7 @@ export default function Dashboard() {
               <input
                 value={nicheDraft}
                 onChange={(e) => setNicheDraft(e.target.value)}
-                placeholder="e.g. home workouts, personal finance, vegan cooking"
+                placeholder="Your niche or industry — who you serve and what you offer"
                 className="flex-1 rounded-lg border border-slate-300 px-3.5 py-2.5 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
               />
               <button className="rounded-lg bg-indigo-600 px-5 py-2.5 font-semibold text-white hover:bg-indigo-700">Save</button>

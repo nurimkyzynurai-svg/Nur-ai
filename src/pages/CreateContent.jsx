@@ -2,129 +2,23 @@ import { useEffect, useRef, useState } from 'react'
 import DashboardHeader from '../components/DashboardHeader.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { GOALS, LANGUAGES } from '../agents/shared.js'
+import { Card, CopyButton } from '../components/ui.jsx'
+import { EMPTY_BRAND, ProfileSummary, VoiceSetup } from '../components/VoiceSetup.jsx'
+import { brandKey as brandStorageKey, load, save } from '../lib/storage.js'
+import { postStream } from '../lib/stream.js'
 
 const PIPELINE = [
   ['brandDna', 'Brand DNA Agent', '🧬'],
   ['market', 'Market Intelligence Agent', '🌐'],
   ['trend', 'Trend Agent', '📡'],
+  ['creative', 'Creative Director Agent', '💡'],
   ['hook', 'Hook Agent', '🪝'],
   ['script', 'Script Agent', '📝'],
   ['quality', 'Quality Agent', '🔍'],
   ['caption', 'Caption Agent', '✍️'],
   ['director', 'Director Agent', '🎬'],
 ]
-const ICONS = Object.fromEntries(PIPELINE.map(([id, , icon]) => [id, icon]))
-
-const QUESTIONS = [
-  ['tone', 'Tone', 'How should your content sound? (e.g. warm, bold, funny, calm)'],
-  ['style', 'Style', 'How do you like to write and present? (short lines, stories, lists, emojis…)'],
-  ['audience', 'Audience', 'Who are you talking to? What do they want?'],
-  ['phrases', 'Favorite phrases', 'Words or expressions you use often'],
-  ['neverDo', 'Never do', 'Topics, words or styles we must never use'],
-]
-
-const EMPTY_BRAND = { examplePosts: ['', '', ''], answers: { tone: '', style: '', audience: '', phrases: '', neverDo: '' } }
-
-function load(key, fallback) {
-  try {
-    const raw = localStorage.getItem(key)
-    return raw ? JSON.parse(raw) : fallback
-  } catch {
-    return fallback
-  }
-}
-
-function save(key, value) {
-  try {
-    localStorage.setItem(key, JSON.stringify(value))
-  } catch {
-    // storage unavailable
-  }
-}
-
-function CopyButton({ text }) {
-  const [copied, setCopied] = useState(false)
-  return (
-    <button
-      type="button"
-      onClick={() => {
-        navigator.clipboard?.writeText(text)
-        setCopied(true)
-        setTimeout(() => setCopied(false), 1500)
-      }}
-      className="rounded-md border border-slate-200 px-2 py-1 text-xs font-medium text-slate-600 hover:border-indigo-300 hover:text-indigo-600"
-    >
-      {copied ? 'Copied ✓' : 'Copy'}
-    </button>
-  )
-}
-
-function Card({ title, action, children, className = '' }) {
-  return (
-    <section className={`rounded-2xl border border-slate-200 bg-white p-6 ${className}`}>
-      {(title || action) && (
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <h2 className="font-semibold text-slate-900">{title}</h2>
-          {action}
-        </div>
-      )}
-      {children}
-    </section>
-  )
-}
-
-function VoiceSetup({ brand, setBrand }) {
-  const setPost = (i, v) => setBrand({ ...brand, examplePosts: brand.examplePosts.map((p, j) => (j === i ? v : p)) })
-  const setAnswer = (k, v) => setBrand({ ...brand, answers: { ...brand.answers, [k]: v } })
-  const input = 'w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20'
-
-  return (
-    <div className="space-y-5">
-      <div>
-        <p className="text-sm font-medium text-slate-700">Your 3–5 best posts</p>
-        <p className="text-xs text-slate-500">Paste the text or script of posts that performed well and sound like you.</p>
-        <div className="mt-2 space-y-2">
-          {brand.examplePosts.map((post, i) => (
-            <textarea key={i} rows={3} value={post} onChange={(e) => setPost(i, e.target.value)} placeholder={`Post ${i + 1}`} className={input} />
-          ))}
-        </div>
-        {brand.examplePosts.length < 5 && (
-          <button type="button" onClick={() => setBrand({ ...brand, examplePosts: [...brand.examplePosts, ''] })} className="mt-2 text-sm font-medium text-indigo-600 hover:text-indigo-700">
-            + Add another post
-          </button>
-        )}
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2">
-        {QUESTIONS.map(([key, label, hint], i) => (
-          <label key={key} className={key === 'neverDo' ? 'sm:col-span-2' : ''}>
-            <span className="text-sm font-medium text-slate-700">{i + 1}. {label}</span>
-            <input value={brand.answers[key]} onChange={(e) => setAnswer(key, e.target.value)} placeholder={hint} className={`mt-1 ${input}`} />
-          </label>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-function ProfileSummary({ profile }) {
-  const rows = [
-    ['Tone', profile.tone],
-    ['Style', profile.style],
-    ['Audience', profile.audience],
-    ['Favorite phrases', profile.favorite_phrases?.join(' · ')],
-    ['Never do', profile.never_do?.join(' · ')],
-  ]
-  return (
-    <dl className="grid gap-3 text-sm sm:grid-cols-2">
-      {rows.map(([k, v]) => (
-        <div key={k} className={k === 'Never do' ? 'sm:col-span-2' : ''}>
-          <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">{k}</dt>
-          <dd className="mt-0.5 text-slate-700">{v || '—'}</dd>
-        </div>
-      ))}
-    </dl>
-  )
-}
+const ICONS = { ...Object.fromEntries(PIPELINE.map(([id, , icon]) => [id, icon])), directorPick: '🎬' }
 
 function Progress({ steps, running }) {
   return (
@@ -241,6 +135,44 @@ function Results({ result }) {
               <ul className="mt-1 list-inside list-disc text-slate-700">{plan.filming_checklist.map((c) => <li key={c}>{c}</li>)}</ul>
             </div>
           </div>
+        </Card>
+      )}
+
+      {result.creative && (
+        <Card title="Creative concepts">
+          <p className="mb-4 text-sm text-slate-600">
+            <span className="font-semibold text-slate-900">Director’s pick:</span> {result.creative.reasoning}
+          </p>
+          <div className="grid gap-3 lg:grid-cols-3">
+            {result.creative.concepts.map((c, i) => {
+              const chosen = i === result.creative.chosenIndex
+              return (
+                <div key={i} className={`rounded-xl border p-4 ${chosen ? 'border-indigo-300 bg-indigo-50' : 'border-slate-100'}`}>
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="font-semibold text-slate-900">{c.title}</p>
+                    {chosen && <span className="flex-none rounded-full bg-indigo-600 px-2 py-0.5 text-xs font-semibold text-white">Chosen</span>}
+                  </div>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {c.format} · {c.emotional_core} · for {c.purpose}
+                  </p>
+                  <p className="mt-2 text-sm text-slate-700">{c.big_idea}</p>
+                  <p className="mt-2 text-xs text-slate-500">
+                    <span className="font-semibold">Angle:</span> {c.angle}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    <span className="font-semibold">Visual:</span> {c.visual_signature}
+                  </p>
+                </div>
+              )
+            })}
+          </div>
+          {result.creative.directorNotes?.length > 0 && (
+            <ul className="mt-4 list-inside list-disc text-sm text-slate-600">
+              {result.creative.directorNotes.map((n) => (
+                <li key={n}>{n}</li>
+              ))}
+            </ul>
+          )}
         </Card>
       )}
 
@@ -371,7 +303,7 @@ function Results({ result }) {
 
 export default function CreateContent() {
   const { user } = useAuth()
-  const brandKey = `viply_brand_${user.email}`
+  const brandKey = brandStorageKey(user.email)
   const dashboard = load(`viply_dashboard_${user.email}`, {})
   const saved = load(brandKey, null)
 
@@ -430,31 +362,13 @@ export default function CreateContent() {
     abortRef.current = controller
 
     try {
-      const res = await fetch('/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ niche, goal, language: lang, brandProfile: profile, brandInputs: profile ? undefined : brand }),
-        signal: controller.signal,
-      })
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}))
-        throw new Error(body.error || `Server error (${res.status})`)
-      }
-      const reader = res.body.getReader()
-      const decoder = new TextDecoder()
-      let buffer = ''
-      for (;;) {
-        const { value, done } = await reader.read()
-        if (done) break
-        buffer += decoder.decode(value, { stream: true })
-        const lines = buffer.split('\n')
-        buffer = lines.pop()
-        for (const line of lines) if (line.trim()) onEvent(JSON.parse(line))
-      }
+      await postStream(
+        '/api/generate',
+        { niche, goal, language: lang, brandProfile: profile, brandInputs: profile ? undefined : brand },
+        { onEvent, signal: controller.signal },
+      )
     } catch (err) {
-      if (err.name !== 'AbortError') {
-        setError(err instanceof TypeError ? 'Cannot reach the Viply server. Is it running? (npm run dev)' : err.message)
-      }
+      if (err.name !== 'AbortError') setError(err.message)
     } finally {
       setRunning(false)
     }
@@ -481,7 +395,7 @@ export default function CreateContent() {
                     value={niche}
                     onChange={(e) => setNiche(e.target.value)}
                     maxLength={200}
-                    placeholder="e.g. home workouts for busy moms, coffee shop in Almaty"
+                    placeholder="Your niche or industry — who you serve and what you offer"
                     className="mt-1 w-full rounded-lg border border-slate-300 px-3.5 py-2.5 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
                   />
                 </label>

@@ -28,8 +28,10 @@ ${BANNED_CLICHES.map((c) => `  - ${c}`).join('\n')}
   backed by something specific the viewer can see or check. Invented statistics count too — a statistic is only allowed
   if it appears in the Market Brief and is attributed.
 - Business goal: the call to action does not say exactly what to write or do with a keyword in capitals
-  (e.g. «Напишите слово ТОН в директ»), or "cta_keyword" is empty, or the keyword in "cta_keyword" is not the one used in the cta beat.
+  (pattern: «Напишите слово [КЛЮЧ] в директ»), or "cta_keyword" is empty, or the keyword in "cta_keyword" is not the one used in the cta beat.
 - The script does not open with the chosen hook, or is not written in the required content language.
+- The briefing contains a content plan item and the script does not deliver exactly what it describes (topic, message,
+  format, offer, call to action), or it drops a [placeholder] the client must fill in.
 - This is a rewrite and a feedback item from the previous review was not fixed.
 
 ## Scoring scale
@@ -100,13 +102,14 @@ ${JSON.stringify(script, null, 2)}${previous}
 Score this script.`
   },
 
+  // Sample-mode data only (MOCK_AI).
   exampleOutput: {
     virality_score: 8,
     brand_match_score: 9,
     overall_score: 8,
     passed: true,
-    strengths: ['Strong pattern-interrupt hook', 'Uses “tiny wins” naturally'],
-    feedback: [{ id: 'F1', quote: '', problem: 'Optional polish: the body runs a little long.', fix: 'Cut myth two to one sentence.' }],
+    strengths: ['[Sample] Strong pattern-interrupt hook', '[Sample] Clear call to action'],
+    feedback: [{ id: 'F1', quote: '', problem: '[Sample] Optional polish: the body runs a little long.', fix: 'Cut one sentence from the body.' }],
     previous_feedback_check: [],
   },
 }

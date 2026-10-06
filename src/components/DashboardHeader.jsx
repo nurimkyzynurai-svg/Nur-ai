@@ -6,6 +6,7 @@ import { PLANS } from '../data.js'
 const TABS = [
   ['/dashboard', 'Overview', 'Home'],
   ['/dashboard/create', 'Create Content', 'Create'],
+  ['/dashboard/plan', 'Content Plan', 'Plan'],
 ]
 const ADMIN_TAB = ['/admin/market-intel', 'Market Intel', 'Intel']
 
@@ -24,9 +25,9 @@ export default function DashboardHeader() {
   return (
     <header className="border-b border-slate-200 bg-white">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
-        <div className="flex items-center gap-3 sm:gap-6">
-          <Logo compact={tabs.length > 2} />
-          <nav className="flex gap-1">
+        <div className="flex min-w-0 items-center gap-3 sm:gap-6">
+          <Logo compact />
+          <nav className="flex min-w-0 gap-1 overflow-x-auto">
             {tabs.map(([to, label, short]) => (
               <NavLink
                 key={to}
@@ -42,7 +43,7 @@ export default function DashboardHeader() {
             ))}
           </nav>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-none items-center gap-4">
           <span className="hidden rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700 lg:inline">{plan.name} plan</span>
           <div className="hidden text-right lg:block">
             <p className="text-sm font-medium text-slate-900">{user.name}</p>

@@ -67,13 +67,14 @@ ${briefForPrompt(ctx.marketBrief)}
 Suggest 10 trending content ideas for this client and pick the best one to produce now.`
   },
 
+  // Sample-mode data only (MOCK_AI). "{niche}" is replaced with the client's niche.
   exampleOutput: {
     ideas: Array.from({ length: 10 }, (_, i) => ({
-      title: ['3 home workout myths keeping you stuck', 'POV: you only have 15 minutes', 'I did 100 squats a day for 7 days'][i % 3],
-      format: ['Myth vs fact', 'POV', 'Challenge'][i % 3],
-      angle: 'Back-to-routine season — people are restarting habits.',
+      title: ['[Sample] 3 myths about {niche}', '[Sample] POV: your first week with {niche}', '[Sample] What nobody tells you about {niche}'][i % 3],
+      format: ['Myth vs fact', 'POV', 'Storytime'][i % 3],
+      angle: '[Sample] Placeholder angle — real runs use the Market Brief.',
       based_on: 'evergreen',
-      why_it_works: 'Challenges a belief the audience holds and promises a quick fix.',
+      why_it_works: '[Sample] Challenges a common belief and promises a quick, useful answer.',
       virality_potential: 9 - (i % 4),
     })),
     best_idea_index: 0,

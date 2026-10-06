@@ -71,14 +71,15 @@ ${posts.length ? posts.map((p, i) => `--- Post ${i + 1} ---\n${p.trim()}`).join(
 Create the Brand DNA profile.`
   },
 
+  // Sample-mode data only (MOCK_AI). "{niche}" is replaced with the client's niche.
   exampleOutput: {
-    tone: 'Warm, direct, playful, encouraging. Sounds like a big sister who trains you in her living room.',
-    style: 'Short sentences. One idea per line. 1–2 emojis max. Opens with a bold claim, closes with a question.',
-    audience: 'Busy women 25–40 who want to get fit at home in under 20 minutes and feel guilty about skipping the gym.',
-    favorite_phrases: ['no gym, no excuses', 'let’s gooo', 'tiny wins'],
-    never_do: ['Never body-shame', 'Never promise fast weight loss', 'Never use more than 2 emojis'],
-    content_pillars: ['15-minute home workouts', 'mindset and consistency', 'myth busting'],
-    voice_example: 'You don’t need an hour. You need 15 minutes and a towel. Tiny wins, every day — let’s gooo!',
-    confidence: 'medium',
+    tone: '[Sample] Confident, warm and direct — sounds like an expert friend in {niche}.',
+    style: '[Sample] Short sentences, one idea per line, few emojis. Opens with a bold claim, ends with a question.',
+    audience: '[Sample] People interested in {niche} who want practical, honest guidance.',
+    favorite_phrases: ['[sample phrase 1]', '[sample phrase 2]'],
+    never_do: ['Never make promises the client has not approved', 'Never use more than 2 emojis'],
+    content_pillars: ['[Sample] practical tips', '[Sample] behind the scenes', '[Sample] common myths'],
+    voice_example: '[Sample] A short line written in this voice about {niche}.',
+    confidence: 'low',
   },
 }

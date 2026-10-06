@@ -68,7 +68,9 @@ async function mockRun(agent, input, signal) {
       reject(new Error('aborted'))
     })
   })
-  const out = structuredClone(agent.exampleOutput)
+  if (agent.id === 'planImprover') return mockImprove(input)
+  const niche = input.niche || 'your niche'
+  const out = JSON.parse(JSON.stringify(agent.exampleOutput).replaceAll('{niche}', niche.replace(/["\\]/g, '')))
   if (agent.id === 'quality' && (input.attempt === 1 || MOCK_ALWAYS_FAIL)) {
     // Fail the draft so the Script ⇄ Quality loop (and "needs review") is visible.
     Object.assign(out, {
@@ -76,8 +78,8 @@ async function mockRun(agent, input, signal) {
       overall_score: 7,
       passed: false,
       feedback: [
-        { id: 'F1', quote: 'Three myths are wasting your 15 minutes.', problem: 'The setup is slow — viewers may swipe at second 5.', fix: 'Cut the setup to one line and tease myth three immediately.' },
-        { id: 'F2', quote: '', problem: 'No concrete proof in the body.', fix: 'Show a before/after of your form on camera.' },
+        { id: 'F1', quote: '', problem: '[Sample] The setup is slow — viewers may swipe at second 5.', fix: 'Cut the setup to one line and tease the strongest point immediately.' },
+        { id: 'F2', quote: '', problem: '[Sample] No concrete proof in the body.', fix: 'Show the concrete result on camera instead of describing it.' },
       ],
       previous_feedback_check: (input.previousFeedback || []).map((f) => ({ id: f.id, fixed: true, note: 'Fixed' })),
     })
@@ -86,4 +88,30 @@ async function mockRun(agent, input, signal) {
     out.fixes = input.feedback.map((f) => ({ feedback_id: f.id, what_changed: `Fixed: ${f.fix}` }))
   }
   return out
+}
+
+// Sample "Improve it": keeps the client's days, sharpens the first unlocked one, adds a teaser before the key date.
+function mockImprove({ plan }) {
+  const days = plan.days.map((d, i) => ({
+    date: d.date,
+    content: !d.locked && i === 0 ? `[Sample improvement] ${d.content}` : d.content,
+    format: d.format || 'Reel',
+    platform: d.platform,
+    phase: d.date < plan.keyDate ? 'teaser' : d.date === plan.keyDate ? 'main moment' : 'follow-up',
+    change: !d.locked && i === 0 ? 'improved' : 'kept',
+    original_date: '',
+    reason: !d.locked && i === 0 ? '[Sample] Sharper opening angle.' : '[Sample] Already strong.',
+  }))
+  const before = new Date(`${plan.keyDate}T00:00:00Z`)
+  before.setUTCDate(before.getUTCDate() - 1)
+  const teaser = before.toISOString().slice(0, 10)
+  if (teaser >= plan.startDate && !days.some((d) => d.date === teaser)) {
+    days.push({ date: teaser, content: '[Sample] Teaser: a countdown that hints at what is coming tomorrow.', format: 'Story', platform: '', phase: 'teaser', change: 'new', original_date: '', reason: '[Sample] Builds anticipation right before the key date.' })
+  }
+  return {
+    strategy_summary: '[Sample] Placeholder strategy: warm up, tease, deliver the main moment, then follow up.',
+    phases: [{ name: 'teaser', start_date: plan.startDate, end_date: plan.keyDate, purpose: '[Sample] Build anticipation.' }],
+    days: days.sort((a, b) => a.date.localeCompare(b.date)),
+    removed: [],
+  }
 }
